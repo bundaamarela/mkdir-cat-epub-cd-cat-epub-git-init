@@ -1,10 +1,15 @@
-import './App.css';
+import { useEffect } from 'react';
+
+import { ThemeShowcase } from '@/components/shared/ThemeShowcase';
+import { applyTheme, resolveTheme } from '@/lib/theme/apply';
+import { usePrefs } from '@/lib/store/prefs';
 
 export const App = () => {
-  return (
-    <main>
-      <h1>Cat Epub</h1>
-      <p>Fase 0 — bootstrap concluído.</p>
-    </main>
-  );
+  const theme = usePrefs((s) => s.theme);
+
+  useEffect(() => {
+    applyTheme(resolveTheme(theme));
+  }, [theme]);
+
+  return <ThemeShowcase />;
 };
