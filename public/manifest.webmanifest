@@ -1,0 +1,11 @@
+{
+  "name": "Cat Epub",
+  "short_name": "Cat Epub",
+  "description": "Leitor de EPUB minimalista com identidade visual Cat Epub.",
+  "lang": "pt-PT",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111111",
+  "icons": []
+}
