@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ReaderSurface } from '@/components/reader/ReaderSurface';
 import { ReaderTopBar } from '@/components/reader/ReaderTopBar';
 import * as positions from '@/lib/db/positions';
 import * as books from '@/lib/db/books';
 import type { EpubRenderer, RendererOptions } from '@/lib/epub/renderer';
-import { useBook } from '@/lib/store/library';
+import { BOOK_QUERY_KEYS, useBook } from '@/lib/store/library';
 import { usePrefs } from '@/lib/store/prefs';
 import { readColorToken } from '@/lib/theme/colors';
 import { debounce } from '@/lib/utils/debounce';
@@ -15,6 +15,7 @@ import type { ReadingPosition } from '@/types/book';
 
 const Reader = () => {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
 
   const bookQuery = useBook(id);
   const positionQuery = useQuery({
@@ -91,9 +92,13 @@ const Reader = () => {
   );
 
   // Garante flush da última posição quando saímos do leitor (route change ou unmount).
+  // Invalida as queries de progresso para a Home/Library refrescarem.
   useEffect(() => {
-    return () => persistPosition.flush();
-  }, [persistPosition]);
+    return () => {
+      persistPosition.flush();
+      void queryClient.invalidateQueries({ queryKey: BOOK_QUERY_KEYS.all });
+    };
+  }, [persistPosition, queryClient]);
 
   const handleReady = useCallback(
     (renderer: EpubRenderer) => {

@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { applyTheme, resolveTheme } from '@/lib/theme/apply';
 import type {
   AiProvider,
+  LibraryView,
   PaginationMode,
   Preferences,
   ThemeChoice,
@@ -25,6 +26,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   paginationMode: 'paginated',
   showProgress: true,
   sidebarCollapsed: false,
+  libraryView: 'grid',
   bionicReading: false,
   focusModeEnabled: false,
   focusCheckinInterval: 0,
@@ -45,6 +47,7 @@ interface PrefsState extends Preferences {
   setPaginationMode: (m: PaginationMode) => void;
   setShowProgress: (v: boolean) => void;
   setSidebarCollapsed: (v: boolean) => void;
+  setLibraryView: (v: LibraryView) => void;
   setBionicReading: (v: boolean) => void;
   setFocusModeEnabled: (v: boolean) => void;
   setFocusCheckinInterval: (m: number) => void;
@@ -78,6 +81,7 @@ export const usePrefs = create<PrefsState>()(
       setPaginationMode: (paginationMode) => set({ paginationMode }),
       setShowProgress: (showProgress) => set({ showProgress }),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
+      setLibraryView: (libraryView) => set({ libraryView }),
       setBionicReading: (bionicReading) => set({ bionicReading }),
       setFocusModeEnabled: (focusModeEnabled) => set({ focusModeEnabled }),
       setFocusCheckinInterval: (focusCheckinInterval) => set({ focusCheckinInterval }),

@@ -87,6 +87,83 @@ export const ChevronRightIcon: FC<IconProps> = ({ size, ...rest }) => (
   </svg>
 );
 
+export const ArrowRightIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="M5 12h14" />
+    <path d="m13 6 6 6-6 6" />
+  </svg>
+);
+
+export const BookIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z" />
+    <path d="M4 5v14" />
+    <path d="M8 7h7" />
+  </svg>
+);
+
+export const StarIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.7 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" />
+  </svg>
+);
+
+export const ClockIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </svg>
+);
+
+export const PlusIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+export const UploadIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="M12 16V4" />
+    <path d="m6 10 6-6 6 6" />
+    <path d="M4 20h16" />
+  </svg>
+);
+
+export const TrashIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="M4 6h16" />
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    <path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6" />
+    <path d="M10 11v6M14 11v6" />
+  </svg>
+);
+
+export const GridIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+);
+
+export const ListIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="M8 6h13M8 12h13M8 18h13" />
+    <circle cx="4" cy="6" r="1" />
+    <circle cx="4" cy="12" r="1" />
+    <circle cx="4" cy="18" r="1" />
+  </svg>
+);
+
+export const MoreIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <circle cx="5" cy="12" r="1.2" />
+    <circle cx="12" cy="12" r="1.2" />
+    <circle cx="19" cy="12" r="1.2" />
+  </svg>
+);
+
 /* ============================================================
    Logos do Cat Epub — três variantes: padrão, vazio, a ler.
    Pixel-art deliberado para combinar com a Pixelify Sans.

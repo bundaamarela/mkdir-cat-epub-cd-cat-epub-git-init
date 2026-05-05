@@ -5,6 +5,7 @@ export type ThemeChoice = Theme | 'auto';
 export type PaginationMode = 'paginated' | 'scroll';
 export type TtsProvider = 'webspeech' | 'elevenlabs';
 export type AiProvider = 'anthropic' | 'none';
+export type LibraryView = 'grid' | 'list';
 
 export interface ThemeAutoSchedule {
   lightStart: string; // formato HH:mm (24h)
@@ -31,6 +32,7 @@ export interface Preferences {
   paginationMode: PaginationMode;
   showProgress: boolean;
   sidebarCollapsed: boolean;
+  libraryView: LibraryView;
   bionicReading: boolean;
   focusModeEnabled: boolean;
   focusCheckinInterval: number; // minutos; 0 = desligado
