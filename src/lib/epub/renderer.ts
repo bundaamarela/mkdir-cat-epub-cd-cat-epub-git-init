@@ -133,13 +133,9 @@ export const createRenderer = async ({
 
   applyAttrs(options.paginationMode, options.pageWidth);
 
-  // Inicializa posição. `init()` aplica `lastLocation` se for fornecido,
-  // senão começa no início linear.
-  if (startCfi !== undefined) {
-    await view.init({ lastLocation: startCfi });
-  } else {
-    await view.init();
-  }
+  // foliate-js view.init() requer sempre um objecto (destructure interno).
+  // Passa `lastLocation` se existir, ou objecto vazio para abrir do início.
+  await view.init(startCfi !== undefined ? { lastLocation: startCfi } : ({} as Parameters<View['init']>[0]));
 
   const applyStyles = (styles: RendererStyles): void => {
     const css = buildIframeCss(styles);

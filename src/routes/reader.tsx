@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useShallow } from 'zustand/shallow';
 
 import { ReaderSurface } from '@/components/reader/ReaderSurface';
 import { ReaderTopBar } from '@/components/reader/ReaderTopBar';
@@ -20,7 +21,8 @@ const Reader = () => {
   const bookQuery = useBook(id);
   const positionQuery = useQuery({
     queryKey: ['positions', id ?? 'noop'],
-    queryFn: () => (id ? positions.getById(id) : Promise.resolve(undefined)),
+    // TanStack Query 5 não aceita `undefined` — devolve `null` quando não há posição.
+    queryFn: () => (id ? positions.getById(id).then((p) => p ?? null) : Promise.resolve(null)),
     enabled: id !== undefined,
   });
 
@@ -38,17 +40,19 @@ const Reader = () => {
     void books.update(book.id, { lastReadAt: new Date().toISOString() });
   }, [book]);
 
-  // Opções do renderer derivadas das prefs + tema corrente.
-  const prefs = usePrefs((s) => ({
-    fontFamily: s.fontFamily,
-    fontSize: s.fontSize,
-    lineHeight: s.lineHeight,
-    pageWidth: s.pageWidth,
-    paragraphSpacing: s.paragraphSpacing,
-    letterSpacing: s.letterSpacing,
-    paginationMode: s.paginationMode,
-    theme: s.theme,
-  }));
+  // useShallow evita o loop infinito causado pelo selector de objectos inline.
+  const prefs = usePrefs(
+    useShallow((s) => ({
+      fontFamily: s.fontFamily,
+      fontSize: s.fontSize,
+      lineHeight: s.lineHeight,
+      pageWidth: s.pageWidth,
+      paragraphSpacing: s.paragraphSpacing,
+      letterSpacing: s.letterSpacing,
+      paginationMode: s.paginationMode,
+      theme: s.theme,
+    })),
+  );
 
   const options = useMemo<RendererOptions>(
     () => ({
@@ -92,7 +96,7 @@ const Reader = () => {
   );
 
   // Garante flush da última posição quando saímos do leitor (route change ou unmount).
-  // Invalida as queries de progresso para a Home/Library refrescarem.
+  // Invalida as queries de progresso para a Home/Biblioteca refrescarem.
   useEffect(() => {
     return () => {
       persistPosition.flush();
@@ -145,7 +149,7 @@ const Reader = () => {
 
   if (!id) return <p style={{ padding: '2rem' }}>ID de livro em falta.</p>;
 
-  // Aguarda book + tentativa de leitura da posição (mesmo se devolver undefined).
+  // Aguarda book + tentativa de leitura da posição (mesmo se não existir).
   if (bookQuery.isLoading || positionQuery.isLoading)
     return <p style={{ padding: '2rem', color: 'var(--text-3)' }}>A carregar livro…</p>;
 
