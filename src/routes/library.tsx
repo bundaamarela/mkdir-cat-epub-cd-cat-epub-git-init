@@ -1,3 +1,6 @@
+import { Link } from 'react-router-dom';
+
+import { ImportDropzone } from '@/components/library/ImportDropzone';
 import { useBooks } from '@/lib/store/library';
 
 const Library = () => {
@@ -6,15 +9,20 @@ const Library = () => {
   return (
     <section>
       <h1>Biblioteca</h1>
-      <p>Grelha de livros, importação e filtros — Fase 4 / 5.</p>
+      <p style={{ color: 'var(--text-3)', marginBottom: '1.5rem' }}>
+        Arrasta um EPUB para importar. Clica num livro para abrir.
+      </p>
+
+      <ImportDropzone />
 
       {isLoading && <p style={{ color: 'var(--text-3)' }}>A carregar…</p>}
 
-      {books && (
+      {books && books.length === 0 && (
+        <p style={{ color: 'var(--text-3)' }}>Nenhum livro ainda.</p>
+      )}
+
+      {books && books.length > 0 && (
         <ul style={{ marginTop: '1rem', padding: 0, listStyle: 'none' }}>
-          {books.length === 0 && (
-            <li style={{ color: 'var(--text-3)' }}>Nenhum livro ainda.</li>
-          )}
           {books.map((b) => (
             <li
               key={b.id}
@@ -24,8 +32,13 @@ const Library = () => {
                 fontFamily: 'var(--font-serif)',
               }}
             >
-              <strong>{b.title}</strong>
-              <span style={{ color: 'var(--text-2)' }}> — {b.author}</span>
+              <Link
+                to={`/reader/${b.id}`}
+                style={{ color: 'var(--text)', textDecoration: 'none' }}
+              >
+                <strong>{b.title}</strong>
+                <span style={{ color: 'var(--text-2)' }}> — {b.author}</span>
+              </Link>
             </li>
           ))}
         </ul>
