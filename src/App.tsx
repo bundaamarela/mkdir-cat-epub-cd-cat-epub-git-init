@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
+import { RouterProvider } from 'react-router-dom';
 
-import { ThemeShowcase } from '@/components/shared/ThemeShowcase';
 import { applyTheme, resolveTheme } from '@/lib/theme/apply';
 import { usePrefs } from '@/lib/store/prefs';
+import { router } from '@/routes';
 
 export const App = () => {
   const theme = usePrefs((s) => s.theme);
@@ -11,5 +12,5 @@ export const App = () => {
     applyTheme(resolveTheme(theme));
   }, [theme]);
 
-  return <ThemeShowcase />;
+  return <RouterProvider router={router} />;
 };
