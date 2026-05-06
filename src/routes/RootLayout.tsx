@@ -1,5 +1,5 @@
-import { type FC } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { type FC, useEffect } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { MobileNav } from '@/components/nav/MobileNav';
 import { MobileTopBar } from '@/components/nav/MobileTopBar';
@@ -12,6 +12,22 @@ import styles from './RootLayout.module.css';
 export const RootLayout: FC = () => {
   const { pathname } = useLocation();
   const { isMobile } = useBreakpoint();
+  const navigate = useNavigate();
+
+  // Global Cmd/Ctrl+K → open search from any screen, including inside the reader.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (!((e.metaKey || e.ctrlKey) && e.key === 'k')) return;
+      if (e.target instanceof HTMLElement) {
+        const tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+      }
+      e.preventDefault();
+      void navigate('/search');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navigate]);
 
   // No leitor não há chrome: nem Sidebar, nem MobileNav, nem MobileTopBar
   // são montados (não basta esconder com display:none — os efeitos correriam).

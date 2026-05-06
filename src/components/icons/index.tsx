@@ -156,6 +156,12 @@ export const ListIcon: FC<IconProps> = ({ size, ...rest }) => (
   </svg>
 );
 
+export const TocIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="M4 6h16M4 11h12M4 16h16M4 21h9" />
+  </svg>
+);
+
 export const MoreIcon: FC<IconProps> = ({ size, ...rest }) => (
   <svg {...baseProps(size, rest)}>
     <circle cx="5" cy="12" r="1.2" />

@@ -1,7 +1,7 @@
 import { type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { ChevronLeftIcon, NotesIcon, SettingsIcon } from '@/components/icons';
+import { ChevronLeftIcon, NotesIcon, SearchIcon, SettingsIcon, TocIcon } from '@/components/icons';
 import { cn } from '@/lib/utils/cn';
 import styles from './ReaderTopBar.module.css';
 
@@ -11,6 +11,8 @@ interface Props {
   visible: boolean;
   /** Quantidade de highlights/notas — exibida como badge no botão. */
   notesCount?: number;
+  onToggleToc?: () => void;
+  onToggleSearch?: () => void;
   onToggleNotes?: () => void;
   onToggleSettings?: () => void;
 }
@@ -20,6 +22,8 @@ export const ReaderTopBar: FC<Props> = ({
   author,
   visible,
   notesCount = 0,
+  onToggleToc,
+  onToggleSearch,
   onToggleNotes,
   onToggleSettings,
 }) => {
@@ -40,6 +44,28 @@ export const ReaderTopBar: FC<Props> = ({
         {author && <span className={cn(styles.subtitle)}>{author}</span>}
       </div>
       <div className={cn(styles.rightButtons)}>
+        {onToggleToc && (
+          <button
+            type="button"
+            className={cn(styles.iconButton)}
+            onClick={onToggleToc}
+            aria-label="Índice do livro"
+            data-testid="open-toc-panel"
+          >
+            <TocIcon size={20} />
+          </button>
+        )}
+        {onToggleSearch && (
+          <button
+            type="button"
+            className={cn(styles.iconButton)}
+            onClick={onToggleSearch}
+            aria-label="Procurar no livro"
+            data-testid="open-search-panel"
+          >
+            <SearchIcon size={20} />
+          </button>
+        )}
         {onToggleNotes && (
           <button
             type="button"

@@ -8,13 +8,16 @@ import { FocusCheckinDialog } from '@/components/reader/FocusCheckinDialog';
 import { HighlightToolbar, type HighlightSelection } from '@/components/reader/HighlightToolbar';
 import { PanelNotes } from '@/components/reader/PanelNotes';
 import { PanelOverlay } from '@/components/reader/PanelOverlay';
+import { PanelSearch } from '@/components/reader/PanelSearch';
 import { PanelSettings } from '@/components/reader/PanelSettings';
+import { PanelTOC } from '@/components/reader/PanelTOC';
 import { ReaderSurface } from '@/components/reader/ReaderSurface';
 import { ReaderTopBar } from '@/components/reader/ReaderTopBar';
 import * as positions from '@/lib/db/positions';
 import * as books from '@/lib/db/books';
 import * as notesDb from '@/lib/db/notes';
 import type { EpubAnnotation, EpubRenderer, RendererOptions } from '@/lib/epub/renderer';
+import type { FoliateTOCItem } from 'foliate-js/view.js';
 import {
   HIGHLIGHT_QUERY_KEYS,
   useAddHighlight,
@@ -30,7 +33,7 @@ import { debounce } from '@/lib/utils/debounce';
 import type { Highlight, HighlightColor } from '@/types/highlight';
 import type { ReadingPosition } from '@/types/book';
 
-type Panel = 'notes' | 'settings' | null;
+type Panel = 'notes' | 'settings' | 'toc' | 'search' | null;
 
 /** Minimum upward swipe distance (px) to open settings from the bottom zone. */
 const SWIPE_THRESHOLD = 50;
@@ -82,6 +85,8 @@ const Reader = () => {
   const [panel, setPanel] = useState<Panel>(null);
   const [selection, setSelection] = useState<HighlightSelection | null>(null);
   const [showCheckin, setShowCheckin] = useState(false);
+  const [bookToc, setBookToc] = useState<ReadonlyArray<FoliateTOCItem>>([]);
+  const [currentTocHref, setCurrentTocHref] = useState<string | undefined>(undefined);
 
   const rendererRef = useRef<EpubRenderer | null>(null);
   /** Stub ref for TTS integration (Phase 11). */
@@ -310,6 +315,7 @@ const Reader = () => {
   const handleReady = useCallback(
     (renderer: EpubRenderer) => {
       rendererRef.current = renderer;
+      setBookToc(renderer.getToc());
       if (!book) return;
       renderer.onLocationChange((info) => {
         const cfi = info.cfi;
@@ -317,6 +323,7 @@ const Reader = () => {
         const fraction = typeof info.fraction === 'number' ? info.fraction : 0;
         const index = typeof info.index === 'number' ? info.index : 0;
         persistPosition(book.id, cfi, fraction, index);
+        setCurrentTocHref(renderer.getCurrentTocHref());
       });
       renderer.onSelectionChange((info) => {
         if (info.text.trim().length === 0 || !info.cfiRange || !info.range || !info.doc) {
@@ -434,6 +441,8 @@ const Reader = () => {
           {...(book.author !== undefined ? { author: book.author } : {})}
           visible={chromeVisible}
           notesCount={allHighlights.length}
+          onToggleToc={() => setPanel(panel === 'toc' ? null : 'toc')}
+          onToggleSearch={() => setPanel(panel === 'search' ? null : 'search')}
           onToggleNotes={() => setPanel(panel === 'notes' ? null : 'notes')}
           onToggleSettings={() => setPanel(panel === 'settings' ? null : 'settings')}
         />
@@ -489,6 +498,31 @@ const Reader = () => {
       {panel === 'settings' && (
         <PanelOverlay title="Configurações" onClose={() => setPanel(null)}>
           <PanelSettings />
+        </PanelOverlay>
+      )}
+
+      {panel === 'toc' && (
+        <PanelOverlay title="Índice" onClose={() => setPanel(null)}>
+          <PanelTOC
+            toc={bookToc}
+            {...(currentTocHref !== undefined ? { currentHref: currentTocHref } : {})}
+            onJumpTo={(href) => {
+              void rendererRef.current?.goToHref(href);
+              setPanel(null);
+            }}
+          />
+        </PanelOverlay>
+      )}
+
+      {panel === 'search' && (
+        <PanelOverlay title="Procurar no livro" onClose={() => setPanel(null)} noPadding>
+          <PanelSearch
+            getRenderer={() => rendererRef.current}
+            onJumpTo={(cfi) => {
+              void rendererRef.current?.goToCfi(cfi);
+              setPanel(null);
+            }}
+          />
         </PanelOverlay>
       )}
 

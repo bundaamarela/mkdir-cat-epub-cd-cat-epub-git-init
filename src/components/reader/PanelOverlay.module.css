@@ -64,6 +64,13 @@
   padding: 12px 0;
 }
 
+.bodyFlex {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 600px) {
   .panel {
     width: 100%;

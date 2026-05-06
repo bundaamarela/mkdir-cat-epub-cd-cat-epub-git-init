@@ -8,9 +8,11 @@ interface Props {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** When true, removes body padding/overflow — use for panels with their own scroll (e.g. PanelSearch). */
+  noPadding?: boolean;
 }
 
-export const PanelOverlay: FC<Props> = ({ title, onClose, children }) => (
+export const PanelOverlay: FC<Props> = ({ title, onClose, children, noPadding }) => (
   <aside className={cn(styles.panel)} aria-label={title}>
     <div className={cn(styles.header)}>
       <span className={cn(styles.title)}>{title}</span>
@@ -23,6 +25,6 @@ export const PanelOverlay: FC<Props> = ({ title, onClose, children }) => (
         <CloseIcon size={16} />
       </button>
     </div>
-    <div className={cn(styles.body)}>{children}</div>
+    <div className={cn(styles.body, noPadding && styles.bodyFlex)}>{children}</div>
   </aside>
 );

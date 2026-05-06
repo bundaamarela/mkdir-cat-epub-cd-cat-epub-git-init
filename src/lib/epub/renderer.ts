@@ -1,6 +1,7 @@
 import type {
   DrawAnnotationDetail,
   FoliateBook,
+  FoliateTOCItem,
   RelocateDetail,
   ShowAnnotationDetail,
   View,
@@ -63,10 +64,19 @@ export interface EpubRenderer {
   applyStyles(styles: RendererStyles): void;
   setPaginationMode(mode: 'paginated' | 'scroll'): void;
   goToCfi(cfi: string): Promise<void>;
+  goToHref(href: string): Promise<void>;
   nextPage(): Promise<void>;
   prevPage(): Promise<void>;
   /** CFI da localização visível actual (ou `undefined` antes do primeiro relocate). */
   getCurrentCfi(): string | undefined;
+  /** Href do TOC item visível actual (relocate.tocItem). */
+  getCurrentTocHref(): string | undefined;
+  /** TOC plano e hierárquico do livro (vazio se não disponível). */
+  getToc(): ReadonlyArray<FoliateTOCItem>;
+  /** Acesso ao livro foliate-js subjacente — usado pela busca cross-section. */
+  getBook(): FoliateBook;
+  /** Para uma `index` de section, computa o CFI duma `Range` interna. */
+  cfiFor(index: number, range: Range): string | null;
   /** Subscreve mudanças de posição. Devolve unsubscribe. */
   onLocationChange(listener: RelocateListener): () => void;
   /** Subscreve mudanças de selecção dentro do iframe. Devolve unsubscribe. */
@@ -174,6 +184,7 @@ export const createRenderer = async ({
   applyStyles(options);
 
   let currentCfi: string | undefined;
+  let currentTocHref: string | undefined;
   const locationListeners = new Set<RelocateListener>();
   const selectionListeners = new Set<SelectionListener>();
   const annotationClickListeners = new Set<AnnotationClickListener>();
@@ -223,6 +234,8 @@ export const createRenderer = async ({
   const relocateHandler = (e: Event): void => {
     const detail = (e as CustomEvent<RelocateDetail>).detail;
     if (typeof detail?.cfi === 'string') currentCfi = detail.cfi;
+    const tocHref = detail?.tocItem?.href;
+    if (typeof tocHref === 'string') currentTocHref = tocHref;
     for (const fn of locationListeners) fn(detail);
   };
   view.addEventListener('relocate', relocateHandler);
@@ -259,6 +272,10 @@ export const createRenderer = async ({
     async goToCfi(cfi) {
       await view.goTo(cfi);
     },
+    async goToHref(href) {
+      // foliate-js aceita tanto CFI como href em view.goTo.
+      await view.goTo(href);
+    },
     async nextPage() {
       await view.next();
     },
@@ -267,6 +284,22 @@ export const createRenderer = async ({
     },
     getCurrentCfi() {
       return currentCfi;
+    },
+    getCurrentTocHref() {
+      return currentTocHref;
+    },
+    getToc() {
+      return book.toc ?? [];
+    },
+    getBook() {
+      return book;
+    },
+    cfiFor(index, range) {
+      try {
+        return view.getCFI(index, range);
+      } catch {
+        return null;
+      }
     },
     onLocationChange(listener) {
       locationListeners.add(listener);
