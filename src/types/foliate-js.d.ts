@@ -66,6 +66,30 @@ declare module 'foliate-js/view.js' {
     index?: number;
   }
 
+  export interface FoliateAnnotation {
+    /** CFI (range ou ponto). */
+    value: string;
+    /** Cor opcional usada pelo nosso draw handler. */
+    color?: string;
+    [key: string]: unknown;
+  }
+
+  export interface DrawAnnotationDetail {
+    draw: (
+      func: (rects: ReadonlyArray<DOMRect>, options?: Record<string, unknown>) => Element,
+      opts?: Record<string, unknown>,
+    ) => void;
+    annotation: FoliateAnnotation;
+    doc: Document;
+    range: Range;
+  }
+
+  export interface ShowAnnotationDetail {
+    value: string;
+    index: number;
+    range: Range;
+  }
+
   export class View extends HTMLElement {
     book?: FoliateBook;
     isFixedLayout?: boolean;
@@ -87,5 +111,23 @@ declare module 'foliate-js/view.js' {
     next(): Promise<void> | void;
     prev(): Promise<void> | void;
     getCFI(index: number, range?: Range): string;
+    addAnnotation(
+      annotation: FoliateAnnotation,
+      remove?: boolean,
+    ): Promise<{ index: number; label: string } | undefined>;
+    deleteAnnotation(annotation: FoliateAnnotation): Promise<unknown>;
+    showAnnotation(annotation: FoliateAnnotation): Promise<void>;
+  }
+}
+
+declare module 'foliate-js/overlayer.js' {
+  type DrawFn = (rects: ReadonlyArray<DOMRect>, options?: Record<string, unknown>) => Element;
+
+  export class Overlayer {
+    static highlight: DrawFn;
+    static underline: DrawFn;
+    static squiggly: DrawFn;
+    static strikethrough: DrawFn;
+    static outline: DrawFn;
   }
 }

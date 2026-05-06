@@ -1,6 +1,14 @@
-import type { FoliateBook, RelocateDetail, View } from 'foliate-js/view.js';
+import type {
+  DrawAnnotationDetail,
+  FoliateBook,
+  RelocateDetail,
+  ShowAnnotationDetail,
+  View,
+} from 'foliate-js/view.js';
+import { Overlayer } from 'foliate-js/overlayer.js';
 
 import type { FontFamily } from '@/lib/theme/tokens';
+import type { HighlightColor } from '@/types/highlight';
 
 let registered = false;
 /**
@@ -43,6 +51,12 @@ export type SelectionListener = (info: {
   range: Range | null;
   doc: Document | null;
 }) => void;
+export type AnnotationClickListener = (cfiRange: string) => void;
+
+export interface EpubAnnotation {
+  cfiRange: string;
+  color: HighlightColor;
+}
 
 export interface EpubRenderer {
   /** Substitui completamente o conjunto de estilos aplicados ao iframe. */
@@ -57,6 +71,17 @@ export interface EpubRenderer {
   onLocationChange(listener: RelocateListener): () => void;
   /** Subscreve mudanças de selecção dentro do iframe. Devolve unsubscribe. */
   onSelectionChange(listener: SelectionListener): () => void;
+  /**
+   * Substitui o conjunto inteiro de highlights a desenhar — calcula diff
+   * com o estado interno e invoca add/delete por CFI alterado/novo/ausente.
+   */
+  setHighlights(items: ReadonlyArray<EpubAnnotation>): void;
+  /** Adiciona/actualiza um único highlight. */
+  addHighlight(item: EpubAnnotation): void;
+  /** Remove um único highlight pelo seu CFI range. */
+  removeHighlight(cfiRange: string): void;
+  /** Subscreve cliques sobre highlights existentes (overlayer hit-test). */
+  onAnnotationClick(listener: AnnotationClickListener): () => void;
   /** Liberta recursos e remove o `<foliate-view>` do host. */
   destroy(): void;
 }
@@ -151,6 +176,49 @@ export const createRenderer = async ({
   let currentCfi: string | undefined;
   const locationListeners = new Set<RelocateListener>();
   const selectionListeners = new Set<SelectionListener>();
+  const annotationClickListeners = new Set<AnnotationClickListener>();
+  const highlightState = new Map<string, EpubAnnotation>();
+
+  const COLOR_FALLBACKS: Record<HighlightColor, string> = {
+    yellow: '#fff3a8',
+    green: '#c8e6b8',
+    blue: '#b8d8f0',
+    pink: '#f0c8d8',
+    purple: '#d8c8f0',
+  };
+
+  const resolveColor = (color: HighlightColor): string => {
+    const v = getComputedStyle(host).getPropertyValue(`--highlight-${color}`).trim();
+    return v.length > 0 ? v : COLOR_FALLBACKS[color];
+  };
+
+  const drawHandler = (e: Event): void => {
+    const detail = (e as CustomEvent<DrawAnnotationDetail>).detail;
+    const anno = detail.annotation as { color?: HighlightColor };
+    const color = anno.color !== undefined ? resolveColor(anno.color) : COLOR_FALLBACKS.yellow;
+    detail.draw(Overlayer.highlight, { color });
+  };
+  view.addEventListener('draw-annotation', drawHandler);
+
+  const showAnnotationHandler = (e: Event): void => {
+    const detail = (e as CustomEvent<ShowAnnotationDetail>).detail;
+    for (const fn of annotationClickListeners) fn(detail.value);
+  };
+  view.addEventListener('show-annotation', showAnnotationHandler);
+
+  // Foliate cria o overlayer da secção quando o utilizador navega para ela. O
+  // overlayer perde o estado quando a secção sai do DOM, por isso re-aplicamos
+  // todas as highlights conhecidas sempre que uma nova secção é montada. Cada
+  // `addAnnotation` resolve o CFI e ignora silenciosamente os que não pertencem
+  // à secção activa.
+  const reapplyHighlights = (): void => {
+    setTimeout(() => {
+      for (const a of highlightState.values()) {
+        void view.addAnnotation({ value: a.cfiRange, color: a.color });
+      }
+    }, 0);
+  };
+  view.addEventListener('create-overlay', reapplyHighlights);
 
   const relocateHandler = (e: Event): void => {
     const detail = (e as CustomEvent<RelocateDetail>).detail;
@@ -208,11 +276,44 @@ export const createRenderer = async ({
       selectionListeners.add(listener);
       return () => selectionListeners.delete(listener);
     },
+    setHighlights(items) {
+      const nextKeys = new Set(items.map((i) => i.cfiRange));
+      for (const key of [...highlightState.keys()]) {
+        if (!nextKeys.has(key)) {
+          highlightState.delete(key);
+          void view.deleteAnnotation({ value: key });
+        }
+      }
+      for (const item of items) {
+        const existing = highlightState.get(item.cfiRange);
+        if (!existing || existing.color !== item.color) {
+          highlightState.set(item.cfiRange, { ...item });
+          void view.addAnnotation({ value: item.cfiRange, color: item.color });
+        }
+      }
+    },
+    addHighlight(item) {
+      highlightState.set(item.cfiRange, { ...item });
+      void view.addAnnotation({ value: item.cfiRange, color: item.color });
+    },
+    removeHighlight(cfiRange) {
+      highlightState.delete(cfiRange);
+      void view.deleteAnnotation({ value: cfiRange });
+    },
+    onAnnotationClick(listener) {
+      annotationClickListeners.add(listener);
+      return () => annotationClickListeners.delete(listener);
+    },
     destroy() {
       view.removeEventListener('relocate', relocateHandler);
       view.removeEventListener('load', onLoad);
+      view.removeEventListener('draw-annotation', drawHandler);
+      view.removeEventListener('show-annotation', showAnnotationHandler);
+      view.removeEventListener('create-overlay', reapplyHighlights);
       locationListeners.clear();
       selectionListeners.clear();
+      annotationClickListeners.clear();
+      highlightState.clear();
       try {
         view.close();
       } catch {

@@ -2,17 +2,59 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useShallow } from 'zustand/shallow';
+import { ulid } from 'ulid';
 
+import { HighlightToolbar, type HighlightSelection } from '@/components/reader/HighlightToolbar';
+import { PanelNotes } from '@/components/reader/PanelNotes';
+import { PanelOverlay } from '@/components/reader/PanelOverlay';
 import { ReaderSurface } from '@/components/reader/ReaderSurface';
 import { ReaderTopBar } from '@/components/reader/ReaderTopBar';
 import * as positions from '@/lib/db/positions';
 import * as books from '@/lib/db/books';
-import type { EpubRenderer, RendererOptions } from '@/lib/epub/renderer';
+import type { EpubAnnotation, EpubRenderer, RendererOptions } from '@/lib/epub/renderer';
+import {
+  HIGHLIGHT_QUERY_KEYS,
+  useAddHighlight,
+  useHighlightsByBook,
+  useRemoveHighlight,
+  useUpdateHighlight,
+} from '@/lib/store/highlights';
 import { BOOK_QUERY_KEYS, useBook } from '@/lib/store/library';
 import { usePrefs } from '@/lib/store/prefs';
 import { readColorToken } from '@/lib/theme/colors';
 import { debounce } from '@/lib/utils/debounce';
+import type { Highlight, HighlightColor } from '@/types/highlight';
 import type { ReadingPosition } from '@/types/book';
+
+type Panel = 'notes' | null;
+
+/**
+ * Tenta recolher ~50 chars antes/depois do range, dentro do mesmo nó de texto.
+ * Defensivo — devolve `undefined` se a estrutura do range não for previsível.
+ */
+const buildContext = (range: Range): string | undefined => {
+  try {
+    const text = range.toString();
+    const before =
+      range.startContainer.nodeType === Node.TEXT_NODE
+        ? (range.startContainer.nodeValue ?? '').slice(
+            Math.max(0, range.startOffset - 50),
+            range.startOffset,
+          )
+        : '';
+    const after =
+      range.endContainer.nodeType === Node.TEXT_NODE
+        ? (range.endContainer.nodeValue ?? '').slice(
+            range.endOffset,
+            Math.min((range.endContainer.nodeValue ?? '').length, range.endOffset + 50),
+          )
+        : '';
+    const ctx = `${before}${text}${after}`.trim();
+    return ctx.length > 0 ? ctx : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 const Reader = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,18 +63,23 @@ const Reader = () => {
   const bookQuery = useBook(id);
   const positionQuery = useQuery({
     queryKey: ['positions', id ?? 'noop'],
-    // TanStack Query 5 não aceita `undefined` — devolve `null` quando não há posição.
     queryFn: () => (id ? positions.getById(id).then((p) => p ?? null) : Promise.resolve(null)),
     enabled: id !== undefined,
   });
+  const highlightsQuery = useHighlightsByBook(id);
+
+  const addHighlight = useAddHighlight();
+  const updateHighlight = useUpdateHighlight();
+  const removeHighlight = useRemoveHighlight();
 
   const [chromeVisible, setChromeVisible] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [panel, setPanel] = useState<Panel>(null);
+  const [selection, setSelection] = useState<HighlightSelection | null>(null);
 
   const rendererRef = useRef<EpubRenderer | null>(null);
   const book = bookQuery.data;
 
-  // Marca o livro como aberto agora (lastReadAt) numa única passagem.
   const touchedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!book || touchedRef.current === book.id) return;
@@ -40,7 +87,6 @@ const Reader = () => {
     void books.update(book.id, { lastReadAt: new Date().toISOString() });
   }, [book]);
 
-  // useShallow evita o loop infinito causado pelo selector de objectos inline.
   const prefs = usePrefs(
     useShallow((s) => ({
       fontFamily: s.fontFamily,
@@ -63,7 +109,6 @@ const Reader = () => {
       paragraphSpacing: prefs.paragraphSpacing,
       letterSpacing: prefs.letterSpacing,
       paginationMode: prefs.paginationMode,
-      // `theme` participa para forçar re-leitura das CSS vars; o lint não o sabe.
       background: (prefs.theme, readColorToken('--bg')),
       text: readColorToken('--text'),
     }),
@@ -79,7 +124,6 @@ const Reader = () => {
     ],
   );
 
-  // Debounced upsert da posição (1s).
   const persistPosition = useMemo(
     () =>
       debounce(async (bookId: string, cfi: string, fraction: number, index: number) => {
@@ -95,14 +139,110 @@ const Reader = () => {
     [],
   );
 
-  // Garante flush da última posição quando saímos do leitor (route change ou unmount).
-  // Invalida as queries de progresso para a Home/Biblioteca refrescarem.
   useEffect(() => {
     return () => {
       persistPosition.flush();
       void queryClient.invalidateQueries({ queryKey: BOOK_QUERY_KEYS.all });
     };
   }, [persistPosition, queryClient]);
+
+  // Sincroniza highlights da DB com o overlayer do renderer.
+  const allHighlights = useMemo(() => highlightsQuery.data ?? [], [highlightsQuery.data]);
+
+  // Mantém um ref actualizado: os listeners do renderer (registados uma vez ao
+  // montar) precisam da versão corrente sem re-criar o renderer.
+  const allHighlightsRef = useRef(allHighlights);
+  useEffect(() => {
+    allHighlightsRef.current = allHighlights;
+  }, [allHighlights]);
+
+  useEffect(() => {
+    const r = rendererRef.current;
+    if (!r) return;
+    const items: EpubAnnotation[] = allHighlights.map((h) => ({
+      cfiRange: h.cfiRange,
+      color: h.color,
+    }));
+    r.setHighlights(items);
+  }, [allHighlights]);
+
+  const applyColor = useCallback(
+    async (color: HighlightColor): Promise<void> => {
+      if (!selection || !book) return;
+      const existing = allHighlights.find((h) => h.cfiRange === selection.cfiRange);
+      if (existing) {
+        if (existing.color === color) return;
+        await updateHighlight.mutateAsync({
+          id: existing.id,
+          patch: { color, updatedAt: new Date().toISOString() },
+        });
+      } else {
+        const now = new Date().toISOString();
+        const h: Highlight = {
+          id: ulid(),
+          bookId: book.id,
+          cfiRange: selection.cfiRange,
+          text: selection.text,
+          color,
+          tags: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        const ctx = buildContext(selection.range);
+        if (ctx !== undefined) h.context = ctx;
+        await addHighlight.mutateAsync(h);
+      }
+      try {
+        selection.doc.getSelection()?.removeAllRanges();
+      } catch {
+        /* ignore */
+      }
+      setSelection(null);
+    },
+    [selection, book, allHighlights, addHighlight, updateHighlight],
+  );
+
+  const removeCurrent = useCallback(async (): Promise<void> => {
+    if (!selection) return;
+    const existing = allHighlights.find((h) => h.cfiRange === selection.cfiRange);
+    if (!existing) return;
+    await removeHighlight.mutateAsync(existing.id);
+    rendererRef.current?.removeHighlight(existing.cfiRange);
+    setSelection(null);
+  }, [selection, allHighlights, removeHighlight]);
+
+  const copySelection = useCallback(async (): Promise<void> => {
+    if (!selection) return;
+    try {
+      await navigator.clipboard.writeText(selection.text);
+    } catch {
+      /* ignore */
+    }
+    setSelection(null);
+  }, [selection]);
+
+  const addNoteToSelection = useCallback(async (): Promise<void> => {
+    if (!selection || !book) return;
+    const existing = allHighlights.find((h) => h.cfiRange === selection.cfiRange);
+    if (!existing) {
+      const now = new Date().toISOString();
+      const h: Highlight = {
+        id: ulid(),
+        bookId: book.id,
+        cfiRange: selection.cfiRange,
+        text: selection.text,
+        color: 'yellow',
+        tags: [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      const ctx = buildContext(selection.range);
+      if (ctx !== undefined) h.context = ctx;
+      await addHighlight.mutateAsync(h);
+    }
+    setSelection(null);
+    setPanel('notes');
+  }, [selection, book, allHighlights, addHighlight]);
 
   const handleReady = useCallback(
     (renderer: EpubRenderer) => {
@@ -115,6 +255,25 @@ const Reader = () => {
         const index = typeof info.index === 'number' ? info.index : 0;
         persistPosition(book.id, cfi, fraction, index);
       });
+      renderer.onSelectionChange((info) => {
+        if (info.text.trim().length === 0 || !info.cfiRange || !info.range || !info.doc) {
+          setSelection(null);
+          return;
+        }
+        setSelection({
+          text: info.text,
+          cfiRange: info.cfiRange,
+          range: info.range,
+          doc: info.doc,
+        });
+      });
+      renderer.onAnnotationClick(() => setPanel('notes'));
+      // Sincroniza highlights actuais ao montar o renderer.
+      const items: EpubAnnotation[] = allHighlightsRef.current.map((h) => ({
+        cfiRange: h.cfiRange,
+        color: h.color,
+      }));
+      renderer.setHighlights(items);
     },
     [book, persistPosition],
   );
@@ -123,7 +282,6 @@ const Reader = () => {
     setErrorMsg(err.message);
   }, []);
 
-  // Atalhos de teclado: setas, espaço para toggle UI.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const r = rendererRef.current;
@@ -141,6 +299,9 @@ const Reader = () => {
       } else if (e.key === ' ') {
         e.preventDefault();
         setChromeVisible((v) => !v);
+      } else if (e.key === 'Escape') {
+        setPanel(null);
+        setSelection(null);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -149,7 +310,6 @@ const Reader = () => {
 
   if (!id) return <p style={{ padding: '2rem' }}>ID de livro em falta.</p>;
 
-  // Aguarda book + tentativa de leitura da posição (mesmo se não existir).
   if (bookQuery.isLoading || positionQuery.isLoading)
     return <p style={{ padding: '2rem', color: 'var(--text-3)' }}>A carregar livro…</p>;
 
@@ -166,6 +326,9 @@ const Reader = () => {
     );
 
   const startCfi = positionQuery.data?.cfi;
+  const existingForSelection = selection
+    ? allHighlights.find((h) => h.cfiRange === selection.cfiRange) ?? null
+    : null;
 
   return (
     <div
@@ -173,10 +336,17 @@ const Reader = () => {
       onClick={(e) => {
         const tag = (e.target as HTMLElement).tagName;
         if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT') return;
+        if ((e.target as HTMLElement).closest('[data-testid="highlight-toolbar"], aside')) return;
         setChromeVisible((v) => !v);
       }}
     >
-      <ReaderTopBar title={book.title} author={book.author} visible={chromeVisible} />
+      <ReaderTopBar
+        title={book.title}
+        {...(book.author !== undefined ? { author: book.author } : {})}
+        visible={chromeVisible}
+        notesCount={allHighlights.length}
+        onToggleNotes={() => setPanel(panel === 'notes' ? null : 'notes')}
+      />
       <ReaderSurface
         blob={book.fileBlob}
         options={options}
@@ -184,6 +354,43 @@ const Reader = () => {
         onReady={handleReady}
         onError={handleError}
       />
+      <HighlightToolbar
+        selection={selection}
+        existingHighlight={
+          existingForSelection
+            ? { id: existingForSelection.id, color: existingForSelection.color }
+            : null
+        }
+        onApplyColor={(c) => void applyColor(c)}
+        onRemove={() => void removeCurrent()}
+        onAddNote={() => void addNoteToSelection()}
+        onCopy={() => void copySelection()}
+      />
+      {panel === 'notes' && (
+        <PanelOverlay title="Anotações" onClose={() => setPanel(null)}>
+          <PanelNotes
+            highlights={allHighlights}
+            onJumpTo={async (cfi) => {
+              await rendererRef.current?.goToCfi(cfi);
+              setPanel(null);
+            }}
+            onUpdate={(hid, patch) => {
+              void updateHighlight
+                .mutateAsync({ id: hid, patch })
+                .then(() =>
+                  queryClient.invalidateQueries({
+                    queryKey: HIGHLIGHT_QUERY_KEYS.byBook(book.id),
+                  }),
+                );
+            }}
+            onRemove={(hid) => {
+              const h = allHighlights.find((x) => x.id === hid);
+              if (h) rendererRef.current?.removeHighlight(h.cfiRange);
+              void removeHighlight.mutateAsync(hid);
+            }}
+          />
+        </PanelOverlay>
+      )}
     </div>
   );
 };
