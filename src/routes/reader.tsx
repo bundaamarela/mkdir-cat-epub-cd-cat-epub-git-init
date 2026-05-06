@@ -4,13 +4,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useShallow } from 'zustand/shallow';
 import { ulid } from 'ulid';
 
+import { FocusCheckinDialog } from '@/components/reader/FocusCheckinDialog';
 import { HighlightToolbar, type HighlightSelection } from '@/components/reader/HighlightToolbar';
 import { PanelNotes } from '@/components/reader/PanelNotes';
 import { PanelOverlay } from '@/components/reader/PanelOverlay';
+import { PanelSettings } from '@/components/reader/PanelSettings';
 import { ReaderSurface } from '@/components/reader/ReaderSurface';
 import { ReaderTopBar } from '@/components/reader/ReaderTopBar';
 import * as positions from '@/lib/db/positions';
 import * as books from '@/lib/db/books';
+import * as notesDb from '@/lib/db/notes';
 import type { EpubAnnotation, EpubRenderer, RendererOptions } from '@/lib/epub/renderer';
 import {
   HIGHLIGHT_QUERY_KEYS,
@@ -22,16 +25,18 @@ import {
 import { BOOK_QUERY_KEYS, useBook } from '@/lib/store/library';
 import { usePrefs } from '@/lib/store/prefs';
 import { readColorToken } from '@/lib/theme/colors';
+import { useAutoTheme } from '@/lib/theme/useAutoTheme';
 import { debounce } from '@/lib/utils/debounce';
 import type { Highlight, HighlightColor } from '@/types/highlight';
 import type { ReadingPosition } from '@/types/book';
 
-type Panel = 'notes' | null;
+type Panel = 'notes' | 'settings' | null;
 
-/**
- * Tenta recolher ~50 chars antes/depois do range, dentro do mesmo nó de texto.
- * Defensivo — devolve `undefined` se a estrutura do range não for previsível.
- */
+/** Minimum upward swipe distance (px) to open settings from the bottom zone. */
+const SWIPE_THRESHOLD = 50;
+/** Maximum time (ms) for the swipe gesture to count. */
+const SWIPE_MAX_MS = 400;
+
 const buildContext = (range: Range): string | undefined => {
   try {
     const text = range.toString();
@@ -76,10 +81,17 @@ const Reader = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>(null);
   const [selection, setSelection] = useState<HighlightSelection | null>(null);
+  const [showCheckin, setShowCheckin] = useState(false);
 
   const rendererRef = useRef<EpubRenderer | null>(null);
+  /** Stub ref for TTS integration (Phase 11). */
+  const ttsRef = useRef<{ pause: () => void; resume: () => void } | null>(null);
+
   const book = bookQuery.data;
 
+  const touchStartRef = useRef<{ y: number; time: number } | null>(null);
+
+  // Mark lastReadAt once per book mount.
   const touchedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!book || touchedRef.current === book.id) return;
@@ -97,8 +109,14 @@ const Reader = () => {
       letterSpacing: s.letterSpacing,
       paginationMode: s.paginationMode,
       theme: s.theme,
+      themeAutoSchedule: s.themeAutoSchedule,
+      focusModeEnabled: s.focusModeEnabled,
+      focusCheckinInterval: s.focusCheckinInterval,
     })),
   );
+
+  // Auto theme via requestAnimationFrame — activates only when theme === 'auto'.
+  useAutoTheme(prefs.theme, prefs.themeAutoSchedule);
 
   const options = useMemo<RendererOptions>(
     () => ({
@@ -146,11 +164,8 @@ const Reader = () => {
     };
   }, [persistPosition, queryClient]);
 
-  // Sincroniza highlights da DB com o overlayer do renderer.
   const allHighlights = useMemo(() => highlightsQuery.data ?? [], [highlightsQuery.data]);
 
-  // Mantém um ref actualizado: os listeners do renderer (registados uma vez ao
-  // montar) precisam da versão corrente sem re-criar o renderer.
   const allHighlightsRef = useRef(allHighlights);
   useEffect(() => {
     allHighlightsRef.current = allHighlights;
@@ -166,6 +181,53 @@ const Reader = () => {
     r.setHighlights(items);
   }, [allHighlights]);
 
+  // ── Focus mode check-in ──────────────────────────────────────────────────
+  const checkinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleCheckin = useCallback((): void => {
+    if (checkinTimerRef.current !== null) clearTimeout(checkinTimerRef.current);
+    if (!prefs.focusModeEnabled || prefs.focusCheckinInterval === 0) return;
+    checkinTimerRef.current = setTimeout(() => {
+      // Pause TTS if active (Phase 11 hook).
+      ttsRef.current?.pause();
+      setShowCheckin(true);
+    }, prefs.focusCheckinInterval * 60_000);
+  }, [prefs.focusModeEnabled, prefs.focusCheckinInterval]);
+
+  useEffect(() => {
+    scheduleCheckin();
+    return () => {
+      if (checkinTimerRef.current !== null) clearTimeout(checkinTimerRef.current);
+    };
+  }, [scheduleCheckin]);
+
+  const handleCheckinSubmit = useCallback(
+    (text: string): void => {
+      if (book) {
+        const now = new Date().toISOString();
+        void notesDb.add({
+          id: ulid(),
+          bookId: book.id,
+          body: text,
+          tags: ['focus-checkin'],
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      setShowCheckin(false);
+      ttsRef.current?.resume();
+      scheduleCheckin();
+    },
+    [book, scheduleCheckin],
+  );
+
+  const handleCheckinDismiss = useCallback((): void => {
+    setShowCheckin(false);
+    ttsRef.current?.resume();
+    scheduleCheckin();
+  }, [scheduleCheckin]);
+
+  // ── Highlight actions ────────────────────────────────────────────────────
   const applyColor = useCallback(
     async (color: HighlightColor): Promise<void> => {
       if (!selection || !book) return;
@@ -244,6 +306,7 @@ const Reader = () => {
     setPanel('notes');
   }, [selection, book, allHighlights, addHighlight]);
 
+  // ── Renderer ready ───────────────────────────────────────────────────────
   const handleReady = useCallback(
     (renderer: EpubRenderer) => {
       rendererRef.current = renderer;
@@ -268,7 +331,6 @@ const Reader = () => {
         });
       });
       renderer.onAnnotationClick(() => setPanel('notes'));
-      // Sincroniza highlights actuais ao montar o renderer.
       const items: EpubAnnotation[] = allHighlightsRef.current.map((h) => ({
         cfiRange: h.cfiRange,
         color: h.color,
@@ -282,6 +344,7 @@ const Reader = () => {
     setErrorMsg(err.message);
   }, []);
 
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const r = rendererRef.current;
@@ -308,6 +371,7 @@ const Reader = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // ── Guards ───────────────────────────────────────────────────────────────
   if (!id) return <p style={{ padding: '2rem' }}>ID de livro em falta.</p>;
 
   if (bookQuery.isLoading || positionQuery.isLoading)
@@ -327,8 +391,10 @@ const Reader = () => {
 
   const startCfi = positionQuery.data?.cfi;
   const existingForSelection = selection
-    ? allHighlights.find((h) => h.cfiRange === selection.cfiRange) ?? null
+    ? (allHighlights.find((h) => h.cfiRange === selection.cfiRange) ?? null)
     : null;
+
+  const isFocusMode = prefs.focusModeEnabled;
 
   return (
     <div
@@ -337,16 +403,42 @@ const Reader = () => {
         const tag = (e.target as HTMLElement).tagName;
         if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT') return;
         if ((e.target as HTMLElement).closest('[data-testid="highlight-toolbar"], aside')) return;
-        setChromeVisible((v) => !v);
+        if (!isFocusMode) setChromeVisible((v) => !v);
+      }}
+      // ── Swipe-up from bottom zone opens settings ──────────────────────
+      onTouchStart={(e) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+        const fromBottom = window.innerHeight - touch.clientY;
+        if (fromBottom <= 72) {
+          touchStartRef.current = { y: touch.clientY, time: Date.now() };
+        }
+      }}
+      onTouchEnd={(e) => {
+        const start = touchStartRef.current;
+        touchStartRef.current = null;
+        if (!start) return;
+        const touch = e.changedTouches[0];
+        if (!touch) return;
+        const deltaY = start.y - touch.clientY;
+        const deltaT = Date.now() - start.time;
+        if (deltaY >= SWIPE_THRESHOLD && deltaT <= SWIPE_MAX_MS) {
+          setPanel((p) => (p === 'settings' ? null : 'settings'));
+        }
       }}
     >
-      <ReaderTopBar
-        title={book.title}
-        {...(book.author !== undefined ? { author: book.author } : {})}
-        visible={chromeVisible}
-        notesCount={allHighlights.length}
-        onToggleNotes={() => setPanel(panel === 'notes' ? null : 'notes')}
-      />
+      {/* Chrome hidden in focus mode */}
+      {!isFocusMode && (
+        <ReaderTopBar
+          title={book.title}
+          {...(book.author !== undefined ? { author: book.author } : {})}
+          visible={chromeVisible}
+          notesCount={allHighlights.length}
+          onToggleNotes={() => setPanel(panel === 'notes' ? null : 'notes')}
+          onToggleSettings={() => setPanel(panel === 'settings' ? null : 'settings')}
+        />
+      )}
+
       <ReaderSurface
         blob={book.fileBlob}
         options={options}
@@ -354,6 +446,7 @@ const Reader = () => {
         onReady={handleReady}
         onError={handleError}
       />
+
       <HighlightToolbar
         selection={selection}
         existingHighlight={
@@ -366,6 +459,7 @@ const Reader = () => {
         onAddNote={() => void addNoteToSelection()}
         onCopy={() => void copySelection()}
       />
+
       {panel === 'notes' && (
         <PanelOverlay title="Anotações" onClose={() => setPanel(null)}>
           <PanelNotes
@@ -390,6 +484,20 @@ const Reader = () => {
             }}
           />
         </PanelOverlay>
+      )}
+
+      {panel === 'settings' && (
+        <PanelOverlay title="Configurações" onClose={() => setPanel(null)}>
+          <PanelSettings />
+        </PanelOverlay>
+      )}
+
+      {showCheckin && (
+        <FocusCheckinDialog
+          intervalMinutes={prefs.focusCheckinInterval}
+          onSubmit={handleCheckinSubmit}
+          onDismiss={handleCheckinDismiss}
+        />
       )}
     </div>
   );

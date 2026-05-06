@@ -33,6 +33,12 @@
   background: var(--surface-2);
 }
 
+.rightButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .notesButton {
   position: relative;
 }

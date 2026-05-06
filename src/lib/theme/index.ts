@@ -1,1 +1,2 @@
-export {};
+export { useAutoTheme } from './useAutoTheme';
+
