@@ -1,3 +1,5 @@
+import { formatDistanceToNow } from 'date-fns';
+import { pt } from 'date-fns/locale';
 import { type FC } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -16,6 +18,15 @@ interface Props {
 const formatPages = (spineLength: number): string =>
   `${spineLength.toLocaleString('pt-PT')} cap.`;
 
+const formatLastRead = (iso: string | undefined): string | null => {
+  if (iso === undefined) return null;
+  try {
+    return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: pt });
+  } catch {
+    return null;
+  }
+};
+
 export const BookListItem: FC<Props> = ({ book, onDelete }) => (
   <article className={cn(styles.listRow)}>
     <BookCover book={book} width={48} height={68} logoSize={14} />
@@ -27,6 +38,11 @@ export const BookListItem: FC<Props> = ({ book, onDelete }) => (
           <span className={cn(styles.listChip)}>{book.category}</span>
         )}
         <span className={cn(styles.listInfo)}>{formatPages(book.spineLength)}</span>
+        {formatLastRead(book.lastReadAt) !== null && (
+          <span className={cn(styles.listInfo, styles.listLastRead)}>
+            {formatLastRead(book.lastReadAt)}
+          </span>
+        )}
       </div>
     </div>
     <div className={cn(styles.listActions)}>

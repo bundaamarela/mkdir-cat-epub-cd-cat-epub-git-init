@@ -261,6 +261,10 @@
   color: var(--text-3);
 }
 
+.listLastRead {
+  font-style: italic;
+}
+
 .listActions {
   display: flex;
   flex-direction: column;
