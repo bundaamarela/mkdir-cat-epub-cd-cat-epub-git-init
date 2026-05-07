@@ -33,6 +33,11 @@
   background: var(--surface-2);
 }
 
+.iconButtonActive {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
 .rightButtons {
   display: flex;
   align-items: center;

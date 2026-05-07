@@ -42,6 +42,7 @@ import { BOOK_QUERY_KEYS, useBook } from '@/lib/store/library';
 import { usePrefs } from '@/lib/store/prefs';
 import { readColorToken } from '@/lib/theme/colors';
 import { useAutoTheme } from '@/lib/theme/useAutoTheme';
+import { WebSpeechTTS } from '@/lib/tts/webspeech';
 import { debounce } from '@/lib/utils/debounce';
 import type { Highlight, HighlightColor } from '@/types/highlight';
 import type { ReadingPosition } from '@/types/book';
@@ -147,8 +148,8 @@ const Reader = () => {
   const [toast, setToast] = useState<string | null>(null);
 
   const rendererRef = useRef<EpubRenderer | null>(null);
-  /** Stub ref for TTS integration (Phase 11). */
-  const ttsRef = useRef<{ pause: () => void; resume: () => void } | null>(null);
+  const ttsRef = useRef<WebSpeechTTS | null>(null);
+  const [ttsActive, setTtsActive] = useState(false);
 
   const book = bookQuery.data;
 
@@ -175,6 +176,8 @@ const Reader = () => {
       themeAutoSchedule: s.themeAutoSchedule,
       focusModeEnabled: s.focusModeEnabled,
       focusCheckinInterval: s.focusCheckinInterval,
+      ttsRate: s.ttsRate,
+      ttsVoice: s.ttsVoice,
     })),
   );
 
@@ -531,6 +534,44 @@ const Reader = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // ── TTS ──────────────────────────────────────────────────────────────────
+  const handleToggleTts = useCallback((): void => {
+    const r = rendererRef.current;
+    if (!r) return;
+    if (!ttsRef.current) ttsRef.current = new WebSpeechTTS();
+    const tts = ttsRef.current;
+    if (tts.speaking || tts.paused) {
+      tts.stop();
+      r.clearTtsHighlight();
+      setTtsActive(false);
+      return;
+    }
+    const text = r.getActiveText();
+    if (!text.trim()) return;
+    tts.setRate(prefs.ttsRate);
+    tts.setVoice(prefs.ttsVoice);
+    tts.onBoundary((charIndex) => r.markTtsPosition(charIndex));
+    tts.onEnd(() => {
+      r.clearTtsHighlight();
+      setTtsActive(false);
+    });
+    tts.speak(text);
+    setTtsActive(true);
+  }, [prefs.ttsRate, prefs.ttsVoice]);
+
+  // Auto-pause TTS when chat panel opens.
+  useEffect(() => {
+    if (panel === 'chat') ttsRef.current?.pause();
+  }, [panel]);
+
+  // Stop TTS on unmount.
+  useEffect(() => {
+    return () => {
+      ttsRef.current?.stop();
+      rendererRef.current?.clearTtsHighlight();
+    };
+  }, []);
+
   // ── Guards ───────────────────────────────────────────────────────────────
   if (!id) return <p style={{ padding: '2rem' }}>ID de livro em falta.</p>;
 
@@ -600,6 +641,8 @@ const Reader = () => {
           chatAvailable={isAiEnabled()}
           onToggleNotes={() => setPanel(panel === 'notes' ? null : 'notes')}
           onToggleSettings={() => setPanel(panel === 'settings' ? null : 'settings')}
+          onToggleTts={handleToggleTts}
+          ttsActive={ttsActive}
         />
       )}
 

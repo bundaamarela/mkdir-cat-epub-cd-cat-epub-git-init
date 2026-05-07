@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   ChatIcon,
   ChevronLeftIcon,
+  HeadphonesIcon,
   NotesIcon,
+  PauseIcon,
   SearchIcon,
   SettingsIcon,
   TocIcon,
@@ -25,6 +27,8 @@ interface Props {
   chatAvailable?: boolean;
   onToggleNotes?: () => void;
   onToggleSettings?: () => void;
+  onToggleTts?: () => void;
+  ttsActive?: boolean;
 }
 
 export const ReaderTopBar: FC<Props> = ({
@@ -38,6 +42,8 @@ export const ReaderTopBar: FC<Props> = ({
   chatAvailable = false,
   onToggleNotes,
   onToggleSettings,
+  onToggleTts,
+  ttsActive = false,
 }) => {
   const navigate = useNavigate();
 
@@ -99,6 +105,17 @@ export const ReaderTopBar: FC<Props> = ({
           >
             <NotesIcon size={20} />
             {notesCount > 0 && <span className={cn(styles.badge)}>{notesCount}</span>}
+          </button>
+        )}
+        {onToggleTts && (
+          <button
+            type="button"
+            className={cn(styles.iconButton, ttsActive && styles.iconButtonActive)}
+            onClick={onToggleTts}
+            aria-label={ttsActive ? 'Parar leitura em voz alta' : 'Ler em voz alta'}
+            data-testid="toggle-tts"
+          >
+            {ttsActive ? <PauseIcon size={20} /> : <HeadphonesIcon size={20} />}
           </button>
         )}
         {onToggleSettings && (
