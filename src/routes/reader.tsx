@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useShallow } from 'zustand/shallow';
 import { ulid } from 'ulid';
@@ -108,6 +108,14 @@ const popoverPositionFor = (sel: HighlightSelection): PopoverPosition | null => 
 
 const Reader = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const deepLinkCfi =
+    location.state &&
+    typeof location.state === 'object' &&
+    'cfi' in location.state &&
+    typeof (location.state as { cfi: unknown }).cfi === 'string'
+      ? (location.state as { cfi: string }).cfi
+      : undefined;
   const queryClient = useQueryClient();
 
   const bookQuery = useBook(id);
@@ -541,7 +549,7 @@ const Reader = () => {
       <p style={{ padding: '2rem', color: '#c75050' }}>Erro a abrir EPUB: {errorMsg}</p>
     );
 
-  const startCfi = positionQuery.data?.cfi;
+  const startCfi = deepLinkCfi ?? positionQuery.data?.cfi;
   const existingForSelection = selection
     ? (allHighlights.find((h) => h.cfiRange === selection.cfiRange) ?? null)
     : null;
