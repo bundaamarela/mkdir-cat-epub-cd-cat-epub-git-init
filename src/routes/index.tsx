@@ -1,13 +1,8 @@
+import { lazy } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 
 import Home from './home';
-import Library from './library';
-import Notes from './notes';
-import Reader from './reader';
-import Review from './review';
 import { RootLayout } from './RootLayout';
-import Search from './search';
-import Settings from './settings';
 
 export const router = createBrowserRouter([
   {
@@ -15,12 +10,12 @@ export const router = createBrowserRouter([
     Component: RootLayout,
     children: [
       { index: true, Component: Home },
-      { path: 'library', Component: Library },
-      { path: 'reader/:id', Component: Reader },
-      { path: 'search', Component: Search },
-      { path: 'notes', Component: Notes },
-      { path: 'review', Component: Review },
-      { path: 'settings', Component: Settings },
+      { path: 'library', Component: lazy(() => import('./library')) },
+      { path: 'reader/:id', Component: lazy(() => import('./reader')) },
+      { path: 'search', Component: lazy(() => import('./search')) },
+      { path: 'notes', Component: lazy(() => import('./notes')) },
+      { path: 'review', Component: lazy(() => import('./review')) },
+      { path: 'settings', Component: lazy(() => import('./settings')) },
     ],
   },
 ]);

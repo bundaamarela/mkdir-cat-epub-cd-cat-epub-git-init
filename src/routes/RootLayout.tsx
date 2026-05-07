@@ -1,9 +1,10 @@
-import { type FC, useEffect } from 'react';
+import { type FC, Suspense, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { MobileNav } from '@/components/nav/MobileNav';
 import { MobileTopBar } from '@/components/nav/MobileTopBar';
 import { Sidebar } from '@/components/nav/Sidebar';
+import { PageSkeleton } from '@/components/shared/PageSkeleton';
 import { useSyncTrigger } from '@/lib/sync/useSyncTrigger';
 import { usePrefs } from '@/lib/store/prefs';
 import { cn } from '@/lib/utils/cn';
@@ -48,7 +49,9 @@ export const RootLayout: FC = () => {
   if (isReaderRoute(pathname)) {
     return (
       <div className={cn(styles.readerShell)}>
-        <Outlet />
+        <Suspense fallback={<PageSkeleton />}>
+          <Outlet />
+        </Suspense>
       </div>
     );
   }
@@ -58,7 +61,9 @@ export const RootLayout: FC = () => {
       <div className={cn(styles.mobileShell)}>
         <MobileTopBar />
         <main className={cn(styles.mobileMain)}>
-          <Outlet />
+          <Suspense fallback={<PageSkeleton />}>
+            <Outlet />
+          </Suspense>
         </main>
         <MobileNav />
       </div>
@@ -69,7 +74,9 @@ export const RootLayout: FC = () => {
     <div className={cn(styles.shell)}>
       <Sidebar />
       <main className={cn(styles.main)}>
-        <Outlet />
+        <Suspense fallback={<PageSkeleton />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );
