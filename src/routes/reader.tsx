@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useShallow } from 'zustand/shallow';
 import { ulid } from 'ulid';
 
+import { AiPopover, type PopoverPosition } from '@/components/reader/AiPopover';
 import { FocusCheckinDialog } from '@/components/reader/FocusCheckinDialog';
 import { HighlightToolbar, type HighlightSelection } from '@/components/reader/HighlightToolbar';
 import { PanelNotes } from '@/components/reader/PanelNotes';
@@ -13,6 +14,13 @@ import { PanelSettings } from '@/components/reader/PanelSettings';
 import { PanelTOC } from '@/components/reader/PanelTOC';
 import { ReaderSurface } from '@/components/reader/ReaderSurface';
 import { ReaderTopBar } from '@/components/reader/ReaderTopBar';
+import { generateText, isAiEnabled } from '@/lib/ai/client';
+import {
+  DEFINE_SYSTEM,
+  TRANSLATE_SYSTEM,
+  definePrompt,
+  translatePrompt,
+} from '@/lib/ai/prompts';
 import * as positions from '@/lib/db/positions';
 import * as books from '@/lib/db/books';
 import * as notesDb from '@/lib/db/notes';
@@ -64,6 +72,35 @@ const buildContext = (range: Range): string | undefined => {
   }
 };
 
+/** Sobe a árvore até encontrar o bloco enclosing (p/li/blockquote/div) e devolve o texto. */
+const enclosingParagraph = (range: Range): string => {
+  let node: Node | null = range.commonAncestorContainer;
+  while (node && node.nodeType !== Node.ELEMENT_NODE) node = node.parentNode;
+  while (node && node.nodeType === Node.ELEMENT_NODE) {
+    const el = node as Element;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'p' || tag === 'li' || tag === 'blockquote' || tag === 'div') {
+      const txt = el.textContent?.trim() ?? '';
+      if (txt.length > 0) return txt;
+    }
+    node = el.parentNode;
+  }
+  return range.toString().trim();
+};
+
+/** Posição do popover ancorada por baixo da selecção (coordenadas viewport). */
+const popoverPositionFor = (sel: HighlightSelection): PopoverPosition | null => {
+  const iframe = sel.doc.defaultView?.frameElement;
+  if (!iframe) return null;
+  const iframeRect = iframe.getBoundingClientRect();
+  const rangeRect = sel.range.getBoundingClientRect();
+  if (rangeRect.width === 0 && rangeRect.height === 0) return null;
+  return {
+    top: iframeRect.top + rangeRect.bottom,
+    left: iframeRect.left + rangeRect.left + rangeRect.width / 2,
+  };
+};
+
 const Reader = () => {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -87,6 +124,13 @@ const Reader = () => {
   const [showCheckin, setShowCheckin] = useState(false);
   const [bookToc, setBookToc] = useState<ReadonlyArray<FoliateTOCItem>>([]);
   const [currentTocHref, setCurrentTocHref] = useState<string | undefined>(undefined);
+  const [aiPopover, setAiPopover] = useState<{
+    title: string;
+    loading: boolean;
+    result: string | null;
+    error: string | null;
+    position: PopoverPosition;
+  } | null>(null);
 
   const rendererRef = useRef<EpubRenderer | null>(null);
   /** Stub ref for TTS integration (Phase 11). */
@@ -288,6 +332,42 @@ const Reader = () => {
     setSelection(null);
   }, [selection]);
 
+  const runAiTask = useCallback(
+    async (kind: 'define' | 'translate'): Promise<void> => {
+      if (!selection) return;
+      const position = popoverPositionFor(selection);
+      if (!position) return;
+      const title = kind === 'define' ? 'Definição' : 'Tradução';
+      setAiPopover({ title, loading: true, result: null, error: null, position });
+
+      const text = selection.text.trim();
+      const promptArgs =
+        kind === 'define'
+          ? { system: DEFINE_SYSTEM, prompt: definePrompt(text, enclosingParagraph(selection.range)) }
+          : { system: TRANSLATE_SYSTEM, prompt: translatePrompt(text) };
+      const result = await generateText(promptArgs);
+      setAiPopover((prev) =>
+        prev === null
+          ? prev
+          : {
+              ...prev,
+              loading: false,
+              result: result ?? null,
+              error: result === null ? 'Não foi possível obter resposta da IA.' : null,
+            },
+      );
+    },
+    [selection],
+  );
+
+  const defineSelection = useCallback((): void => {
+    void runAiTask('define');
+  }, [runAiTask]);
+
+  const translateSelection = useCallback((): void => {
+    void runAiTask('translate');
+  }, [runAiTask]);
+
   const addNoteToSelection = useCallback(async (): Promise<void> => {
     if (!selection || !book) return;
     const existing = allHighlights.find((h) => h.cfiRange === selection.cfiRange);
@@ -372,6 +452,7 @@ const Reader = () => {
       } else if (e.key === 'Escape') {
         setPanel(null);
         setSelection(null);
+        setAiPopover(null);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -463,11 +544,25 @@ const Reader = () => {
             ? { id: existingForSelection.id, color: existingForSelection.color }
             : null
         }
+        aiAvailable={isAiEnabled()}
         onApplyColor={(c) => void applyColor(c)}
         onRemove={() => void removeCurrent()}
         onAddNote={() => void addNoteToSelection()}
         onCopy={() => void copySelection()}
+        onDefine={defineSelection}
+        onTranslate={translateSelection}
       />
+
+      {aiPopover && (
+        <AiPopover
+          title={aiPopover.title}
+          loading={aiPopover.loading}
+          result={aiPopover.result}
+          error={aiPopover.error}
+          position={aiPopover.position}
+          onClose={() => setAiPopover(null)}
+        />
+      )}
 
       {panel === 'notes' && (
         <PanelOverlay title="Anotações" onClose={() => setPanel(null)}>

@@ -1,6 +1,6 @@
 import { type FC, useMemo } from 'react';
 
-import { TrashIcon } from '@/components/icons';
+import { BookIcon, TrashIcon } from '@/components/icons';
 import { cn } from '@/lib/utils/cn';
 import type { HighlightColor } from '@/types/highlight';
 import styles from './HighlightToolbar.module.css';
@@ -18,10 +18,14 @@ interface Props {
   selection: HighlightSelection | null;
   /** Highlight existente sob a selecção (para edição/remoção). */
   existingHighlight?: { id: string; color: HighlightColor } | null;
+  /** Quando `true`, os botões Definir/Traduzir ficam clicáveis. */
+  aiAvailable?: boolean;
   onApplyColor: (color: HighlightColor) => void;
   onRemove: () => void;
   onAddNote: () => void;
   onCopy: () => void;
+  onDefine?: () => void;
+  onTranslate?: () => void;
 }
 
 const COLORS: ReadonlyArray<{ id: HighlightColor; cssVar: string; label: string }> = [
@@ -52,10 +56,13 @@ const computePosition = (selection: HighlightSelection): ToolbarPosition | null 
 export const HighlightToolbar: FC<Props> = ({
   selection,
   existingHighlight,
+  aiAvailable = false,
   onApplyColor,
   onRemove,
   onAddNote,
   onCopy,
+  onDefine,
+  onTranslate,
 }) => {
   const position = useMemo<ToolbarPosition | null>(
     () => (selection ? computePosition(selection) : null),
@@ -97,6 +104,30 @@ export const HighlightToolbar: FC<Props> = ({
       <button type="button" className={cn(styles.actionButton)} onClick={onCopy}>
         Copiar
       </button>
+      {onDefine && (
+        <button
+          type="button"
+          className={cn(styles.actionButton)}
+          onClick={onDefine}
+          disabled={!aiAvailable}
+          title={aiAvailable ? 'Definir' : 'IA não configurada'}
+          data-testid="define-button"
+        >
+          <BookIcon size={14} />
+        </button>
+      )}
+      {onTranslate && (
+        <button
+          type="button"
+          className={cn(styles.actionButton)}
+          onClick={onTranslate}
+          disabled={!aiAvailable}
+          title={aiAvailable ? 'Traduzir para PT-PT' : 'IA não configurada'}
+          data-testid="translate-button"
+        >
+          PT
+        </button>
+      )}
       {existingHighlight && (
         <button
           type="button"
