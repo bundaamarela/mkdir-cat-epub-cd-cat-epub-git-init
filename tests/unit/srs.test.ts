@@ -1,8 +1,23 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ulid } from 'ulid';
 
 import * as flashcardsDb from '@/lib/db/flashcards';
 import { db } from '@/lib/db/schema';
+import { generateWithAi, highlightToCard } from '@/lib/srs/card-generator';
 import { createCard, getDueCards, getDueCount, scheduleCard } from '@/lib/srs/scheduler';
+import type { Highlight } from '@/types/highlight';
+
+const makeHighlight = (overrides: Partial<Highlight> = {}): Highlight => ({
+  id: ulid(),
+  bookId: 'b1',
+  cfiRange: 'epubcfi(/6/4!/4/2)',
+  text: 'A entropia mede a desordem de um sistema.',
+  color: 'yellow',
+  tags: [],
+  createdAt: '2026-05-01T12:00:00Z',
+  updatedAt: '2026-05-01T12:00:00Z',
+  ...overrides,
+});
 
 beforeEach(async () => {
   await db.flashcards.clear();
@@ -123,5 +138,55 @@ describe('getDueCards', () => {
     await flashcardsDb.add(b);
     const onlyB1 = await getDueCards('b1', now);
     expect(onlyB1.map((c) => c.bookId)).toEqual(['b1']);
+  });
+});
+
+describe('highlightToCard', () => {
+  it('usa a primeira frase como front e o texto como back quando não há nota', () => {
+    const h = makeHighlight({
+      text: 'A entropia mede a desordem. Um conceito fundamental da termodinâmica.',
+    });
+    const card = highlightToCard(h);
+    expect(card.front).toBe('A entropia mede a desordem.');
+    expect(card.back).toBe(
+      'A entropia mede a desordem. Um conceito fundamental da termodinâmica.',
+    );
+    expect(card.highlightId).toBe(h.id);
+    expect(card.bookId).toBe('b1');
+    expect(card.state).toBe('new');
+  });
+
+  it('usa a nota como back quando existe', () => {
+    const h = makeHighlight({
+      text: 'A entropia mede a desordem.',
+      note: 'Pensar em moléculas dispersando-se.',
+    });
+    const card = highlightToCard(h);
+    expect(card.back).toBe('Pensar em moléculas dispersando-se.');
+  });
+});
+
+describe('generateWithAi', () => {
+  it('parseia resposta no formato Pergunta:/Resposta:', async () => {
+    const h = makeHighlight();
+    const result = await generateWithAi(h, async () =>
+      'Pergunta: O que é entropia?\nResposta: Medida da desordem de um sistema.',
+    );
+    expect(result).toEqual({
+      front: 'O que é entropia?',
+      back: 'Medida da desordem de um sistema.',
+    });
+  });
+
+  it('retorna null quando a IA devolve null', async () => {
+    const h = makeHighlight();
+    const result = await generateWithAi(h, async () => null);
+    expect(result).toBeNull();
+  });
+
+  it('retorna null quando a resposta não corresponde ao formato esperado', async () => {
+    const h = makeHighlight();
+    const result = await generateWithAi(h, async () => 'Texto sem formato esperado.');
+    expect(result).toBeNull();
   });
 });
