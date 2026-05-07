@@ -107,7 +107,18 @@ export const usePrefs = create<PrefsState>()(
     }),
     {
       name: 'cat-epub-prefs',
+      version: 2,
       storage: createJSONStorage(() => dexieStorage),
+      migrate: (state, version) => {
+        if (state === null || typeof state !== 'object') return state;
+        const next = { ...(state as Partial<PrefsState>) };
+        if (version < 2) {
+          // Force the canonical default — older builds may have persisted 'scroll'
+          // before the default was finalized as 'paginated'.
+          next.paginationMode = 'paginated';
+        }
+        return next as PrefsState;
+      },
       onRehydrateStorage: () => (state) => {
         if (state) applyCurrentTheme(state.theme);
       },
