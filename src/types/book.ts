@@ -1,3 +1,5 @@
+import type { EmbeddingStatus } from './embedding';
+
 export interface Book {
   id: string; // ulid
   title: string;
@@ -21,6 +23,10 @@ export interface Book {
   lastReadAt?: string;
   finishedAt?: string;
   estimatedMinutes?: number;
+  /** Estado da geração de embeddings (RAG). */
+  embeddingsStatus?: EmbeddingStatus;
+  /** Progresso 0–100 enquanto `embeddingsStatus === 'running'`. */
+  embeddingsProgress?: number;
 }
 
 export interface ReadingPosition {

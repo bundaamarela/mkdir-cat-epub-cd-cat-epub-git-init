@@ -1,5 +1,7 @@
 import { ulid } from 'ulid';
 
+import { embedBook } from '@/lib/ai/embeddings';
+import { isAiEnabled } from '@/lib/ai/client';
 import * as books from '@/lib/db/books';
 import { sha256 } from '@/lib/utils/hash';
 import type { Book } from '@/types/book';
@@ -91,8 +93,17 @@ export const importEpubFile = async (
     if (parsed.metadata.identifier !== undefined) book.isbn = parsed.metadata.identifier;
     if (parsed.metadata.description !== undefined) book.description = parsed.metadata.description;
     if (parsed.coverBlob !== undefined) book.coverBlob = parsed.coverBlob;
+    if (isAiEnabled()) book.embeddingsStatus = 'pending';
 
     await books.add(book);
+
+    // Background job: gera embeddings sem bloquear o import. Erros são registados
+    // na própria row (book.embeddingsStatus === 'error'), nunca propagam ao caller.
+    if (isAiEnabled()) {
+      void embedBook(id, parsed.book).catch((err) => {
+        console.error('[import] embedBook background job failed', err);
+      });
+    }
 
     notify('done');
     return { status: 'imported', bookId: id, title: book.title };

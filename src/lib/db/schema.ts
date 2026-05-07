@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie';
 
 import type { Book, ReadingPosition } from '@/types/book';
 import type { Bookmark, Note } from '@/types/note';
+import type { Embedding } from '@/types/embedding';
 import type { Flashcard, ReadingSession } from '@/types/flashcard';
 import type { Highlight } from '@/types/highlight';
 import type { Preferences } from '@/types/prefs';
@@ -27,6 +28,7 @@ export class CatEpubDB extends Dexie {
   flashcards!: Table<Flashcard, string>;
   sessions!: Table<ReadingSession, string>;
   prefs!: Table<PreferencesRow, 'singleton'>;
+  embeddings!: Table<Embedding, string>;
 
   constructor(name = 'CatEpub') {
     super(name);
@@ -39,6 +41,10 @@ export class CatEpubDB extends Dexie {
       flashcards: 'id, bookId, due, state, highlightId',
       sessions: 'id, bookId, startedAt',
       prefs: 'id',
+    });
+    this.version(2).stores({
+      // Adds embeddings table (chunked vectors per book) for RAG.
+      embeddings: 'id, bookId',
     });
   }
 }

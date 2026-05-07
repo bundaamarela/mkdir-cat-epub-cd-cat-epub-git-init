@@ -32,11 +32,20 @@ export const add = async (book: Book): Promise<string> => db.books.add(book);
 export const update = async (id: string, patch: Partial<Book>): Promise<number> =>
   db.books.update(id, patch);
 
-/** Remove o livro e os dados associados (positions, highlights, notes, bookmarks, sessions, flashcards). */
+/** Remove o livro e os dados associados (positions, highlights, notes, bookmarks, sessions, flashcards, embeddings). */
 export const remove = async (id: string): Promise<void> => {
   await db.transaction(
     'rw',
-    [db.books, db.positions, db.highlights, db.notes, db.bookmarks, db.sessions, db.flashcards],
+    [
+      db.books,
+      db.positions,
+      db.highlights,
+      db.notes,
+      db.bookmarks,
+      db.sessions,
+      db.flashcards,
+      db.embeddings,
+    ],
     async () => {
       await db.books.delete(id);
       await db.positions.delete(id);
@@ -45,6 +54,7 @@ export const remove = async (id: string): Promise<void> => {
       await db.bookmarks.where('bookId').equals(id).delete();
       await db.sessions.where('bookId').equals(id).delete();
       await db.flashcards.where('bookId').equals(id).delete();
+      await db.embeddings.where('bookId').equals(id).delete();
     },
   );
 };

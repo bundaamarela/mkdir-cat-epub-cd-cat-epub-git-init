@@ -13,31 +13,45 @@ interface Props {
   onDelete: (book: BookWithProgress) => void;
 }
 
-export const BookCard: FC<Props> = ({ book, onDelete }) => (
-  <article className={cn(styles.gridItem)}>
-    <Link to={`/reader/${book.id}`} className={cn(styles.gridLink)} aria-label={`Abrir ${book.title}`}>
-      <BookCover book={book} width="100%" height={170} logoSize={32} />
-      <div className={cn(styles.gridMeta)}>
-        <h3 className={cn(styles.gridTitle)}>{book.title}</h3>
-        <p className={cn(styles.gridAuthor)}>{book.author}</p>
-        {book.progress > 0 && (
-          <div className={cn(styles.gridProgress)}>
-            <ProgressBar value={book.progress} label={`${book.progress}% lido`} />
-          </div>
-        )}
-      </div>
-    </Link>
-    <button
-      type="button"
-      className={cn(styles.gridDelete)}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onDelete(book);
-      }}
-      aria-label={`Eliminar ${book.title}`}
-    >
-      <TrashIcon size={14} />
-    </button>
-  </article>
-);
+export const BookCard: FC<Props> = ({ book, onDelete }) => {
+  const embStatus = book.embeddingsStatus;
+  const embProgress = book.embeddingsProgress ?? 0;
+  const showEmb = embStatus === 'running' || embStatus === 'pending';
+
+  return (
+    <article className={cn(styles.gridItem)}>
+      <Link to={`/reader/${book.id}`} className={cn(styles.gridLink)} aria-label={`Abrir ${book.title}`}>
+        <BookCover book={book} width="100%" height={170} logoSize={32} />
+        <div className={cn(styles.gridMeta)}>
+          <h3 className={cn(styles.gridTitle)}>{book.title}</h3>
+          <p className={cn(styles.gridAuthor)}>{book.author}</p>
+          {book.progress > 0 && (
+            <div className={cn(styles.gridProgress)}>
+              <ProgressBar value={book.progress} label={`${book.progress}% lido`} />
+            </div>
+          )}
+          {showEmb && (
+            <div className={cn(styles.gridEmbeddings)}>
+              <span className={cn(styles.gridEmbeddingsLabel)}>
+                {embStatus === 'pending' ? 'A preparar IA…' : `IA: ${embProgress}%`}
+              </span>
+              <ProgressBar value={embProgress} label="Geração de embeddings" />
+            </div>
+          )}
+        </div>
+      </Link>
+      <button
+        type="button"
+        className={cn(styles.gridDelete)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDelete(book);
+        }}
+        aria-label={`Eliminar ${book.title}`}
+      >
+        <TrashIcon size={14} />
+      </button>
+    </article>
+  );
+};
