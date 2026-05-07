@@ -2,6 +2,7 @@ import { type FC } from 'react';
 import { NavLink } from 'react-router-dom';
 
 import { CatLogo, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons';
+import { useDueCount } from '@/lib/srs/useDueCount';
 import { usePrefs } from '@/lib/store/prefs';
 import { cn } from '@/lib/utils/cn';
 import { NAV_ITEMS } from './nav-items';
@@ -15,6 +16,7 @@ interface Props {
 export const Sidebar: FC<Props> = ({ onNavigate }) => {
   const collapsed = usePrefs((s) => s.sidebarCollapsed);
   const setCollapsed = usePrefs((s) => s.setSidebarCollapsed);
+  const dueCount = useDueCount();
 
   return (
     <aside
@@ -27,20 +29,30 @@ export const Sidebar: FC<Props> = ({ onNavigate }) => {
       </NavLink>
 
       <nav className={cn(styles.nav)}>
-        {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            onClick={onNavigate}
-            className={({ isActive }) => cn(styles.item, isActive && styles.itemActive)}
-            aria-label={label}
-            title={collapsed ? label : ''}
-          >
-            <Icon size={20} />
-            <span className={cn(styles.itemLabel)}>{label}</span>
-          </NavLink>
-        ))}
+        {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
+          const showBadge = to === '/review' && dueCount !== null && dueCount > 0;
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              onClick={onNavigate}
+              className={({ isActive }) => cn(styles.item, isActive && styles.itemActive)}
+              aria-label={showBadge ? `${label} (${dueCount} para hoje)` : label}
+              title={collapsed ? label : ''}
+            >
+              <span className={cn(styles.itemIcon)}>
+                <Icon size={20} />
+                {showBadge && (
+                  <span className={cn(styles.badge)} data-testid="review-badge">
+                    {dueCount}
+                  </span>
+                )}
+              </span>
+              <span className={cn(styles.itemLabel)}>{label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
 
       <div className={cn(styles.footer)}>

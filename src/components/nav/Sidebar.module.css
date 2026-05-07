@@ -67,6 +67,31 @@
   font-weight: 500;
 }
 
+.itemIcon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+
 .itemLabel {
   flex: 1 1 auto;
 }
