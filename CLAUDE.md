@@ -1,219 +1,211 @@
-# Prompt Mestre para Claude Code — Construção do Cat Epub
-
-> **Como usar este documento:** copia-o integralmente para o ficheiro `CLAUDE.md` na raiz do teu novo repositório, ou anexa-o à primeira mensagem em Claude Code com o prefixo "Lê este documento na íntegra antes de qualquer acção e segue as fases pela ordem em que estão definidas. Não passes para a fase seguinte sem confirmação explícita do utilizador."
-
-> **Idioma operacional:** Todas as strings de UI, comentários relevantes ao utilizador final e mensagens de erro visíveis devem estar em português europeu. Comentários técnicos internos podem ser em inglês.
-
+# CLAUDE.md — Cat Epub: Documento Mestre de Desenvolvimento
+> **Versão:** 2.0 — Maio de 2026
+> **Para:** Kouran, solo founder
+> **Estado actual:** Fases 0–12 completas · 136 testes · Fase 13 (polish + build) em curso
+>
+> **Como usar:** Este ficheiro é lido pelo Claude Code no início de cada sessão. Contém o estado completo do projecto, decisões tomadas, padrões estabelecidos e fases futuras. Lê-o na íntegra antes de qualquer acção.
 ---
-
-## 0. Contexto Estratégico (LER PRIMEIRO)
-
+## 0. Contexto Estratégico
 ### 0.1 Quem é o utilizador
-Solo founder a operar entre Moçambique, Angola e Portugal. Construtor de múltiplas plataformas (BizBlueprint, Baooba, Scaraab). Familiarizado com Next.js, Supabase, Stripe, Cursor e ambientes de desenvolvimento agentic. Esta aplicação é primariamente para **uso pessoal próprio** — não há roadmap comercial imediato, mas a arquitectura deve permitir extensão futura sem reescrita.
-
+Solo founder a operar entre Moçambique, Angola e Portugal. Construtor de múltiplas plataformas (BizBlueprint, Baooba, Scaraab). Stack familiar: Next.js, Supabase, Stripe, Cursor, ambientes agentic. Esta aplicação é primariamente para **uso pessoal próprio** — não há roadmap comercial imediato, mas a arquitectura deve permitir extensão futura sem reescrita.
 ### 0.2 O que é o Cat Epub
-Aplicação de leitura de ficheiros EPUB com identidade visual estabelecida ("Cat Epub" — gato como mascote), três temas tipográficos (claro, sépia, escuro) e foco extremo em minimalismo durante a leitura. Existe um protótipo HTML+React-CDN funcional como referência visual e arquitectónica que **não deve ser ignorado nem reescrito a partir do zero**: o teu trabalho é converter esse protótipo num produto real, preservando a identidade.
-
+Aplicação de leitura de ficheiros EPUB com identidade visual estabelecida ("Cat Epub" — gato como mascote), quatro temas tipográficos (claro, sépia, escuro, preto OLED) e foco extremo em minimalismo durante a leitura. Existe um protótipo HTML+React-CDN em `_prototype/` como referência visual e arquitectónica — preserva a identidade, não reescreves do zero.
 ### 0.3 Princípios não-negociáveis
-1. **Minimalismo durante a leitura.** Quando um livro está aberto, zero chrome por defeito. Toda a UI esconde-se.
-2. **Personalização profunda.** Tipografia, espaçamento, margens, tema, comportamento de páginação — tudo configurável.
-3. **Offline-first.** A aplicação tem de funcionar sem rede. Sync é opcional e secundária.
-4. **Cross-platform com codebase única.** Desktop (macOS, Windows, Linux) via Tauri 2. Mobile via PWA instalável (iOS Safari + Android Chrome).
-5. **Performance.** Abrir um EPUB de 5 MB tem de levar menos de 1 segundo no desktop. Mudar de página tem de ser instantâneo.
-6. **Privacidade.** Dados de leitura (highlights, notas, posição) ficam no dispositivo por defeito. Sync é opt-in.
-
-### 0.4 O que NÃO construir (e porquê)
-- ❌ Loja integrada de livros — não é o negócio.
-- ❌ DRM proprietário — fricção desnecessária.
-- ❌ Streaks, badges, gamificação social — psicologia predatória que distorce o propósito.
-- ❌ Recomendações algorítmicas — o utilizador escolhe o que lê.
-- ❌ Mais de 6 fontes ou 4 temas — paralisia de escolha mata atenção.
-- ❌ Onboarding extenso — a app deve ser auto-evidente em 30 segundos.
-- ❌ Bionic Reading como funcionalidade principal — dados empíricos recentes mostram que prejudica leitores típicos. Implementa apenas como toggle opcional na fase final.
-
+1. **Minimalismo durante a leitura.** Quando um livro está aberto, zero chrome por defeito.
+2. **Personalização profunda.** Tipografia, espaçamento, margens, tema, paginação — tudo configurável.
+3. **Offline-first.** A app funciona sem rede. Sync é opt-in e secundária.
+4. **Cross-platform com codebase única.** Desktop via Tauri 2, mobile via PWA instalável.
+5. **Performance.** EPUB de 5 MB abre em <1s. Mudar de página é instantâneo.
+6. **Privacidade.** Dados ficam no dispositivo por defeito. Embeddings de IA nunca saem do device.
+### 0.4 O que NÃO construir
+- ❌ Loja integrada de livros
+- ❌ DRM proprietário
+- ❌ Streaks, badges, gamificação social — psicologia predatória
+- ❌ Recomendações algorítmicas
+- ❌ Mais de 6 fontes ou 4 temas — paralisia de escolha
+- ❌ Onboarding extenso — auto-evidente em 30 segundos
+- ❌ Bionic Reading como default — evidência empírica contra uso universal
+### 0.5 Estado actual do projecto (Maio 2026)
+**Fases completas:** 0–12 (136 testes a passar, 3 e2e)
+**Branch activa:** `claude/read-claude-section-10-IioJn`
+**Remote funcional:** `pat` (origin proxy retorna 403 — usar sempre `git push pat`)
+**Último commit:** Fase 12 completa (sync Supabase opt-in)
+**A seguir:** Fase 13 (polish, PWA, Tauri builds, README)
+**Depois:** Fase 14 (features novas — ver §5/Fase 14)
 ---
-
-## 1. Stack Técnico (decisões já tomadas — não questionar sem motivo forte)
-
-### 1.1 Núcleo
-| Camada | Tecnologia | Justificação |
+## 1. Stack Técnico
+### 1.1 Versões reais instaladas (actualizadas face ao spec original)
+| Camada | Versão instalada | Nota |
 |---|---|---|
-| Linguagem | TypeScript 5.4+ (strict) | Refactor seguro, autocomplete, contratos explícitos |
-| Framework UI | React 18 | Já no protótipo; ecossistema maduro |
-| Build tool | Vite 5 | Mais rápido que Webpack, ideal para Tauri |
-| Desktop runtime | Tauri 2 (Rust + WebView) | Bundle <10 MB vs ~150 MB do Electron |
-| Mobile | PWA (Vite + vite-plugin-pwa) | Instalável em iOS/Android sem stores |
-| Roteamento | React Router 6 (modo `data router`) | Padrão de facto |
-| Estado global | Zustand | Sem boilerplate, persistência via middleware |
-| Estado servidor | TanStack Query 5 | Cache, retry, sync apenas quando necessário |
-| Base de dados local | Dexie.js sobre IndexedDB | Funciona em browser e Tauri webview |
-| EPUB parsing/render | foliate-js | Motor open-source do Foliate; usado pela Readest; suporte EPUB 3, ficção fixed-layout, bidi |
-| Estilização | CSS Modules + CSS Variables | Já usadas no protótipo; sem runtime de Tailwind |
-| Ícones | Inline SVG (existentes em `icons.jsx`) | Já estão definidos; converter para `.tsx` |
-| Tipografia | Pixelify Sans (display) + Lora (corpo serif) + Inter (corpo sans) + Atkinson Hyperlegible (acessibilidade) | 4 fontes, suficiente |
-| Sync (opcional, fase 11) | Supabase | Stack já familiar ao utilizador |
-| Spaced repetition | ts-fsrs | Implementação open-source do algoritmo FSRS-4.5 (estado-da-arte) |
-| TTS | Web Speech API (default) + ElevenLabs (opcional) | Fallback nativo + premium opcional |
-| AI / RAG | API Anthropic (Claude) + transformers.js para embeddings locais | Privacidade: embeddings sem sair do dispositivo; chat envia apenas o relevante |
-
-### 1.2 Versões mínimas
-- Node.js: 20 LTS
-- pnpm: 9+ (não usar npm nem yarn — pnpm é mais rápido e correcto com workspaces)
-- Rust: 1.77+ (apenas para Tauri, instalado uma vez)
-
-### 1.3 NÃO usar
-- Tailwind CSS (mantém CSS variables — já estão estabelecidas no protótipo)
+| React | **19** (não 18) | Template Vite instalou 19 — compatível, manter |
+| TypeScript | **6** (não 5.4) | Compatível — manter |
+| Vite | **8** (não 5) | Compatível — manter |
+| Tauri | 2 | Conforme spec |
+| Node.js | 20 LTS | Mínimo obrigatório |
+| pnpm | 9+ | Não usar npm/yarn |
+| Rust | 1.77+ | Para Tauri |
+### 1.2 Dependências runtime (instaladas)
+```
+react-router-dom · zustand · dexie · @tanstack/react-query
+ts-fsrs · ulid · date-fns · marked · dompurify
+@xenova/transformers · @anthropic-ai/sdk · @supabase/supabase-js
+```
+### 1.3 Dependências dev (instaladas)
+```
+vitest · @testing-library/react · @testing-library/jest-dom
+@playwright/test · fake-indexeddb · eslint · prettier
+vite-plugin-pwa · @tauri-apps/cli
+```
+### 1.4 foliate-js — decisão especial
+**Não está no npm.** Instalado como git submodule:
+```bash
+git submodule add https://github.com/johnfactotum/foliate-js vendor/foliate-js
+git submodule update --init --recursive  # ao clonar
+```
+Alias Vite em `vite.config.ts`: `'foliate-js': path.resolve(__dirname, 'vendor/foliate-js')`
+### 1.5 NÃO usar
+- Tailwind CSS (mantém CSS variables)
 - Redux / MobX (Zustand é suficiente)
 - styled-components / emotion (CSS-in-JS pesa em runtime)
-- Material UI / Chakra / Ant Design (impõem identidade visual; temos a nossa)
-
+- Material UI / Chakra / Ant Design (impõem identidade visual)
 ---
-
-## 2. Estrutura de Directórios
-
+## 2. Estrutura de Directórios (estado real)
 ```
 cat-epub/
-├── CLAUDE.md                          # Este documento
-├── README.md                          # Documentação pública
-├── package.json
-├── pnpm-lock.yaml
-├── tsconfig.json
-├── vite.config.ts
-├── .gitignore
-├── .editorconfig
-├── .prettierrc
-├── .eslintrc.cjs
-├── index.html
+├── CLAUDE.md
+├── README.md
+├── _prototype/                        # Referência visual — NÃO editar
+│   ├── Cat Epub Reader.html
+│   ├── Cat Epub Mockups.html
+│   ├── store.jsx
+│   ├── icons.jsx
+│   └── tweaks-panel.jsx
+├── vendor/
+│   └── foliate-js/                    # git submodule
+├── supabase/
+│   └── schema.sql                     # Executar manualmente no Supabase
 ├── src/
-│   ├── main.tsx                       # Entry point
-│   ├── App.tsx                        # Root component
-│   ├── routes/                        # React Router routes
-│   │   ├── index.tsx                  # Layout root
-│   │   ├── home.tsx
-│   │   ├── library.tsx
-│   │   ├── reader.tsx
-│   │   ├── search.tsx
-│   │   ├── notes.tsx
-│   │   ├── review.tsx                 # Spaced repetition daily review
-│   │   └── settings.tsx
+│   ├── main.tsx
+│   ├── App.tsx
+│   ├── routes/
+│   │   ├── index.tsx                  # RootLayout com Sidebar/MobileNav
+│   │   ├── home.tsx                   # ✅ Fase 5 + stats reais (Fase 11)
+│   │   ├── library.tsx                # ✅ Fase 5 + "última leitura" (Fase 11)
+│   │   ├── reader.tsx                 # ✅ Fase 4 + highlights + IA + TTS + FSRS
+│   │   ├── search.tsx                 # ✅ Fase 8
+│   │   ├── notes.tsx                  # ✅ Fase 6
+│   │   ├── review.tsx                 # ✅ Fase 10
+│   │   └── settings.tsx               # ✅ Fase 7 + IA (9) + TTS (11) + Sync (12)
 │   ├── components/
-│   │   ├── shared/                    # Botões, sliders, toggles, modais
+│   │   ├── shared/
 │   │   │   ├── Button.tsx
 │   │   │   ├── Slider.tsx
 │   │   │   ├── Toggle.tsx
 │   │   │   ├── Segmented.tsx
 │   │   │   ├── Modal.tsx
-│   │   │   └── Toast.tsx
+│   │   │   └── Toast.tsx             # ✅ Fase 10
 │   │   ├── reader/
-│   │   │   ├── ReaderSurface.tsx      # Onde o EPUB é renderizado
-│   │   │   ├── ReaderTopBar.tsx
+│   │   │   ├── ReaderSurface.tsx
+│   │   │   ├── ReaderTopBar.tsx      # TOC + Search + Bookmark + Settings + TTS + Chat
 │   │   │   ├── ReaderBottomBar.tsx
-│   │   │   ├── HighlightToolbar.tsx   # Aparece ao seleccionar texto
-│   │   │   ├── PanelTOC.tsx
-│   │   │   ├── PanelBookmarks.tsx
-│   │   │   ├── PanelNotes.tsx
-│   │   │   ├── PanelChat.tsx          # Chat with book
-│   │   │   └── PanelSettings.tsx
+│   │   │   ├── HighlightToolbar.tsx  # 5 cores + nota + copiar + definir + traduzir + flashcard
+│   │   │   ├── PanelTOC.tsx          # ✅ Fase 8
+│   │   │   ├── PanelSearch.tsx       # ✅ Fase 8 (busca cancelável via AbortSignal)
+│   │   │   ├── PanelNotes.tsx        # ✅ Fase 6
+│   │   │   ├── PanelChat.tsx         # ✅ Fase 9 (RAG + citações clicáveis)
+│   │   │   ├── PanelSettings.tsx     # ✅ Fase 7 (sliders live)
+│   │   │   ├── PanelOverlay.tsx      # Wrapper partilhado (suporta noPadding)
+│   │   │   └── AiPopover.tsx         # ✅ Fase 9 (definir/traduzir)
 │   │   ├── library/
-│   │   │   ├── BookCover.tsx
+│   │   │   ├── BookCover.tsx         # Capa real ou procedural (hsl + CatLogo)
 │   │   │   ├── BookCard.tsx
 │   │   │   ├── BookGrid.tsx
 │   │   │   ├── BookList.tsx
-│   │   │   ├── ImportDropzone.tsx
+│   │   │   ├── ImportDropzone.tsx    # drag+click, multi-file, dedup SHA-256
 │   │   │   └── FilterBar.tsx
 │   │   ├── home/
 │   │   │   ├── Greeting.tsx
-│   │   │   ├── StatsBlock.tsx
+│   │   │   ├── StatsBlock.tsx        # ✅ Fase 11 (gráfico SVG 7 dias)
 │   │   │   ├── ContinueReading.tsx
 │   │   │   └── RecentlyRead.tsx
-│   │   ├── nav/
-│   │   │   ├── Sidebar.tsx
-│   │   │   ├── MobileNav.tsx
-│   │   │   └── MobileTopBar.tsx
-│   │   └── icons/
-│   │       └── index.tsx              # Re-export tipado de todos os SVG
+│   │   └── nav/
+│   │       ├── Sidebar.tsx           # Badge de cards due (Fase 10)
+│   │       ├── MobileNav.tsx
+│   │       └── MobileTopBar.tsx
 │   ├── lib/
 │   │   ├── epub/
-│   │   │   ├── parser.ts              # Wrapper sobre foliate-js
-│   │   │   ├── renderer.ts            # Render lifecycle
-│   │   │   ├── pagination.ts          # Cálculo de páginas/CFI
-│   │   │   └── search.ts              # Busca dentro do livro
+│   │   │   ├── parser.ts             # parseEpub, openEpubBook
+│   │   │   ├── renderer.ts           # createRenderer + API completa + TTS marks
+│   │   │   ├── pagination.ts
+│   │   │   └── search.ts             # searchInBook (cancelável, AbortSignal)
 │   │   ├── db/
-│   │   │   ├── schema.ts              # Definição Dexie
-│   │   │   ├── books.ts               # Repositório books
-│   │   │   ├── highlights.ts          # Repositório highlights
+│   │   │   ├── schema.ts             # CatEpubDB (versão 2 — inclui embeddings)
+│   │   │   ├── books.ts
+│   │   │   ├── highlights.ts
 │   │   │   ├── notes.ts
 │   │   │   ├── flashcards.ts
-│   │   │   └── sessions.ts            # Sessões de leitura
+│   │   │   ├── sessions.ts
+│   │   │   └── embeddings.ts         # ✅ Fase 9
 │   │   ├── store/
-│   │   │   ├── prefs.ts               # Zustand store de preferências
-│   │   │   ├── reader.ts              # Estado do leitor activo
-│   │   │   ├── library.ts
-│   │   │   └── ui.ts                  # Estado de UI (sidebar, modal aberto…)
+│   │   │   ├── prefs.ts              # usePrefs com useShallow obrigatório
+│   │   │   └── library.ts
 │   │   ├── srs/
-│   │   │   ├── scheduler.ts           # Wrapper sobre ts-fsrs
-│   │   │   └── card-generator.ts      # Highlight → flashcard
+│   │   │   ├── scheduler.ts          # FSRS-4.5 wrapper
+│   │   │   └── card-generator.ts     # highlightToCard + generateWithAi (DI)
 │   │   ├── ai/
-│   │   │   ├── client.ts              # Cliente Anthropic
-│   │   │   ├── rag.ts                 # Embeddings + retrieval
-│   │   │   ├── embeddings.ts          # transformers.js wrapper
-│   │   │   └── prompts.ts             # System prompts
+│   │   │   ├── client.ts             # Anthropic client (isAiEnabled guard)
+│   │   │   ├── rag.ts                # cosineSimilarity + retrieveRelevant
+│   │   │   ├── embeddings.ts         # transformers.js (Xenova/all-MiniLM-L6-v2)
+│   │   │   └── prompts.ts
 │   │   ├── tts/
-│   │   │   ├── webspeech.ts
-│   │   │   └── elevenlabs.ts
+│   │   │   └── webspeech.ts          # WebSpeechTTS com boundary + pt-PT
 │   │   ├── sync/
-│   │   │   ├── supabase.ts
-│   │   │   └── conflict.ts
+│   │   │   ├── supabase.ts           # pushChanges/pullChanges/resolveConflicts
+│   │   │   └── conflict.ts           # last-write-wins por updatedAt
 │   │   ├── theme/
-│   │   │   ├── tokens.ts              # Definições de tema
+│   │   │   ├── tokens.ts
 │   │   │   └── apply.ts
 │   │   └── utils/
+│   │       ├── cn.ts                 # CSS Modules helper (noUncheckedIndexedAccess)
 │   │       ├── date.ts
 │   │       ├── debounce.ts
+│   │       ├── id.ts
 │   │       ├── markdown.ts
-│   │       └── id.ts
+│   │       ├── useBreakpoint.ts      # useSyncExternalStore (não useState+useEffect)
+│   │       └── useDueCount.ts        # polling 5min para badge FSRS
 │   ├── types/
 │   │   ├── book.ts
 │   │   ├── highlight.ts
 │   │   ├── note.ts
 │   │   ├── prefs.ts
-│   │   └── flashcard.ts
+│   │   ├── flashcard.ts
+│   │   └── foliate-js.d.ts           # Tipos ambiente para foliate-js
 │   ├── styles/
-│   │   ├── globals.css                # Reset + variables base
-│   │   ├── themes.css                 # Light/sepia/dark/black-OLED
-│   │   └── reader.css                 # Estilos específicos do conteúdo EPUB
+│   │   ├── globals.css
+│   │   ├── themes.css                # 4 temas: light/sepia/dark/black
+│   │   └── reader.css
 │   └── assets/
-│       ├── fonts/                     # Pixelify Sans, Lora, Inter, Atkinson
-│       └── icons/                     # Favicon, logo
-├── src-tauri/                         # Tauri backend (Rust)
-│   ├── Cargo.toml
-│   ├── tauri.conf.json
-│   ├── icons/
-│   └── src/
-│       └── main.rs
+│       └── fonts/                    # Pixelify Sans, Lora, Inter, Atkinson (woff2 local)
+├── src-tauri/
 ├── public/
 │   └── manifest.webmanifest
 └── tests/
     ├── unit/
+    │   ├── db.test.ts
     │   ├── srs.test.ts
-    │   ├── pagination.test.ts
-    │   └── db.test.ts
+    │   ├── sync.test.ts
+    │   ├── sessions.test.ts
+    │   └── search.test.ts
     └── e2e/
-        ├── reader.spec.ts
-        └── library.spec.ts
+        ├── phase4-smoke.spec.ts
+        ├── phase6-highlights.spec.ts
+        └── reader.spec.ts
 ```
-
 ---
-
-## 3. Sistema de Design (preservar do protótipo)
-
-### 3.1 Tokens de cor (CSS Variables)
-
-Manter exactamente como definido no protótipo HTML, com adições. Em `src/styles/themes.css`:
-
+## 3. Sistema de Design
+### 3.1 Tokens de cor (CSS Variables em `src/styles/themes.css`)
 ```css
 :root {
-  /* Light (default) */
   --bg: #ffffff;
   --surface: #f7f7f7;
   --surface-2: #efefef;
@@ -222,7 +214,7 @@ Manter exactamente como definido no protótipo HTML, com adições. Em `src/styl
   --text: #111111;
   --text-2: #555555;
   --text-3: #999999;
-  --accent: #111111;             /* monocromático por design */
+  --accent: #111111;
   --highlight-yellow: #fff3a8;
   --highlight-green:  #c8e6b8;
   --highlight-blue:   #b8d8f0;
@@ -237,200 +229,42 @@ Manter exactamente como definido no protótipo HTML, com adições. Em `src/styl
   --sidebar-w: 240px;
   --sidebar-w-collapsed: 60px;
 }
-
 .theme-sepia {
-  --bg: #f4efe6;
-  --surface: #ede8df;
-  --surface-2: #e3ddd1;
-  --border: #d8d0c0;
-  --border-strong: #c8c0b0;
-  --text: #2c2418;
-  --text-2: #6b5c48;
-  --text-3: #9c8c78;
-  --accent: #2c2418;
+  --bg: #f4efe6; --surface: #ede8df; --surface-2: #e3ddd1;
+  --border: #d8d0c0; --border-strong: #c8c0b0;
+  --text: #2c2418; --text-2: #6b5c48; --text-3: #9c8c78; --accent: #2c2418;
 }
-
 .theme-dark {
-  --bg: #1c1c1e;                 /* NÃO #000 puro — minimiza halação */
-  --surface: #232325;
-  --surface-2: #2a2a2c;
-  --border: #2f2f31;
-  --border-strong: #3a3a3c;
-  --text: #e8ddc8;               /* off-white quente */
-  --text-2: #999999;
-  --text-3: #6a6a6a;
-  --accent: #e8ddc8;
+  --bg: #1c1c1e; --surface: #232325; --surface-2: #2a2a2c;
+  --border: #2f2f31; --border-strong: #3a3a3c;
+  --text: #e8ddc8; --text-2: #999999; --text-3: #6a6a6a; --accent: #e8ddc8;
 }
-
-.theme-black {                   /* OLED extremo, opt-in */
-  --bg: #000000;
-  --surface: #0a0a0a;
-  --surface-2: #121212;
-  --border: #1a1a1a;
-  --border-strong: #2a2a2a;
-  --text: #e5c07b;               /* âmbar para preservar adaptação à escuridão */
-  --text-2: #a08850;
-  --text-3: #5a4830;
-  --accent: #e5c07b;
+.theme-black {
+  --bg: #000000; --surface: #0a0a0a; --surface-2: #121212;
+  --border: #1a1a1a; --border-strong: #2a2a2a;
+  --text: #e5c07b; --text-2: #a08850; --text-3: #5a4830; --accent: #e5c07b;
 }
 ```
-
 ### 3.2 Tipografia
-
 ```css
-:root {
-  --font-display: 'Pixelify Sans', system-ui, sans-serif;
-  --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
-  --font-dyslexic: 'Atkinson Hyperlegible', 'OpenDyslexic', sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
-}
+--font-display: 'Pixelify Sans', system-ui, sans-serif;
+--font-serif:   'Lora', Georgia, serif;
+--font-sans:    'Inter', -apple-system, sans-serif;
+--font-dyslexic:'Atkinson Hyperlegible', sans-serif;
 ```
-
-Carregar localmente via `@font-face` em `src/assets/fonts/` — **não via Google Fonts CDN** (privacidade + offline).
-
-### 3.3 Escala tipográfica do leitor (defaults baseados em investigação)
-
-| Variável | Mobile default | Desktop default | Min | Max |
+**Fontes carregadas localmente** via `@font-face` em `src/assets/fonts/` — nunca CDN.
+### 3.3 Escala tipográfica do leitor (defaults)
+| Variável | Mobile | Desktop | Min | Max |
 |---|---|---|---|---|
-| `fontSize` | 18 px | 19 px | 14 px | 28 px |
-| `lineHeight` | 1.6 | 1.65 | 1.4 | 2.2 |
-| `pageWidth` (medida) | 92% viewport | 680 px | 480 px | 900 px |
-| `paragraphSpacing` | 0.9em | 1em | 0.5em | 2em |
-| `letterSpacing` | 0 | 0 | -0.02em | 0.05em |
-
-### 3.4 Componente `CatLogo`
-Já existe no protótipo. Converter para `.tsx` em `src/components/icons/CatLogo.tsx`. Manter as três variantes: `CatLogo`, `CatEmpty`, `CatReading`.
-
+| fontSize | 18px | 19px | 14px | 28px |
+| lineHeight | 1.6 | 1.65 | 1.4 | 2.2 |
+| pageWidth | 92% | 680px | 480px | 900px |
+| paragraphSpacing | 0.9em | 1em | 0.5em | 2em |
+| paginationMode | paginated | paginated | — | — |
 ---
-
-## 4. Modelo de Dados (Dexie / IndexedDB)
-
-### 4.1 Schema (`src/lib/db/schema.ts`)
-
+## 4. Modelo de Dados (Dexie — versão 2)
 ```ts
-import Dexie, { type Table } from 'dexie';
-
-export interface Book {
-  id: string;                       // ulid
-  title: string;
-  author: string;
-  language?: string;
-  publisher?: string;
-  publishedAt?: string;
-  isbn?: string;
-  fileBlob: Blob;                   // EPUB original
-  fileSize: number;
-  fileHash: string;                 // sha-256 para detectar duplicados
-  coverBlob?: Blob;                 // capa extraída
-  coverHue: number;                 // fallback se sem capa
-  totalCfi?: string;                // CFI da última página
-  spineLength: number;              // num. de capítulos
-  category?: string;                // utilizador-definida
-  tags: string[];
-  rating?: number;                  // 0–5
-  description?: string;
-  addedAt: string;                  // ISO
-  lastReadAt?: string;
-  finishedAt?: string;
-  estimatedMinutes?: number;        // tempo estimado de leitura total
-}
-
-export interface ReadingPosition {
-  bookId: string;                   // PK
-  cfi: string;                      // EPUB CFI
-  chapterIndex: number;
-  percentage: number;               // 0–100
-  updatedAt: string;
-}
-
-export interface Highlight {
-  id: string;
-  bookId: string;
-  cfiRange: string;                 // CFI start-end
-  text: string;                     // texto seleccionado
-  context?: string;                 // ~50 chars antes e depois
-  color: 'yellow' | 'green' | 'blue' | 'pink' | 'purple';
-  semanticTag?: 'fact' | 'argue' | 'concept' | 'question' | 'quote';
-  note?: string;                    // markdown
-  tags: string[];                   // hierárquicas: "estratégia/jogos"
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Note {
-  id: string;
-  bookId: string;
-  cfi?: string;                     // pode estar associada a posição
-  highlightId?: string;             // ou a highlight
-  title?: string;
-  body: string;                     // markdown
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Bookmark {
-  id: string;
-  bookId: string;
-  cfi: string;
-  label?: string;
-  createdAt: string;
-}
-
-export interface Flashcard {
-  id: string;
-  bookId: string;
-  highlightId?: string;
-  front: string;
-  back: string;
-  // Estado FSRS
-  due: string;                      // ISO
-  stability: number;
-  difficulty: number;
-  elapsed_days: number;
-  scheduled_days: number;
-  reps: number;
-  lapses: number;
-  state: 'new' | 'learning' | 'review' | 'relearning';
-  last_review?: string;
-}
-
-export interface ReadingSession {
-  id: string;
-  bookId: string;
-  startCfi: string;
-  endCfi?: string;
-  startedAt: string;
-  endedAt?: string;
-  pagesRead: number;
-  wordsRead?: number;
-  fixationCount?: number;           // métricas avançadas (fase 12)
-}
-
-export interface Preferences {
-  id: 'singleton';                  // sempre 'singleton'
-  theme: 'light' | 'sepia' | 'dark' | 'black' | 'auto';
-  themeAutoSchedule: { lightStart: string; darkStart: string };
-  fontFamily: 'serif' | 'sans' | 'dyslexic';
-  fontSize: number;
-  lineHeight: number;
-  pageWidth: number;
-  paragraphSpacing: number;
-  letterSpacing: number;
-  paginationMode: 'paginated' | 'scroll';
-  showProgress: boolean;
-  sidebarCollapsed: boolean;
-  bionicReading: boolean;           // default false
-  focusModeEnabled: boolean;
-  focusCheckinInterval: number;     // minutos; 0 = desligado
-  ttsProvider: 'webspeech' | 'elevenlabs';
-  ttsRate: number;                  // 0.5–2.0
-  syncEnabled: boolean;
-  aiProvider: 'anthropic' | 'none';
-  aiApiKey?: string;                // armazenada localmente
-}
-
+// src/lib/db/schema.ts — versão actual com embeddings
 export class CatEpubDB extends Dexie {
   books!: Table<Book, string>;
   positions!: Table<ReadingPosition, string>;
@@ -440,7 +274,8 @@ export class CatEpubDB extends Dexie {
   flashcards!: Table<Flashcard, string>;
   sessions!: Table<ReadingSession, string>;
   prefs!: Table<Preferences, 'singleton'>;
-
+  embeddings!: Table<EmbeddingChunk, string>;  // ← adicionado Fase 9
+  sync_queue!: Table<SyncQueueItem, string>;   // ← adicionado Fase 12
   constructor() {
     super('CatEpub');
     this.version(1).stores({
@@ -453,549 +288,315 @@ export class CatEpubDB extends Dexie {
       sessions: 'id, bookId, startedAt',
       prefs: 'id',
     });
+    this.version(2).stores({
+      embeddings: 'id, bookId, chunkIndex',
+      sync_queue: 'id, table, createdAt',
+    });
   }
 }
-
-export const db = new CatEpubDB();
 ```
-
+**Tipos adicionados:**
+```ts
+interface EmbeddingChunk {
+  id: string; bookId: string; chunkIndex: number;
+  chunkText: string; vector: number[];
+}
+interface SyncQueueItem {
+  id: string; table: string; recordId: string;
+  operation: 'insert' | 'update' | 'delete';
+  payload: unknown; createdAt: string;
+}
+```
 ---
-
-## 5. Fases de Implementação (sequenciais — não saltar)
-
-### Convenção de gates entre fases
-No final de cada fase, executa o seguinte e pára à espera de aprovação:
-
+## 5. Padrões Estabelecidos (aprendidos em produção)
+> Esta secção é crítica. Documenta padrões que foram descobertos e validados durante o desenvolvimento. Segue-os sem questionar — cada um resolveu um bug real.
+### 5.1 Zustand com useShallow OBRIGATÓRIO
+```tsx
+// ❌ ERRADO — cria novo objecto a cada render → loop infinito com useSyncExternalStore
+const { fontSize, lineHeight } = usePrefs(s => ({ fontSize: s.fontSize, lineHeight: s.lineHeight }));
+// ✅ CORRECTO
+import { useShallow } from 'zustand/react/shallow';
+const { fontSize, lineHeight } = usePrefs(useShallow(s => ({ fontSize: s.fontSize, lineHeight: s.lineHeight })));
+```
+### 5.2 TanStack Query 5 — queryFn não pode retornar undefined
+```ts
+// ❌ ERRADO
+queryFn: () => positions.getById(bookId)  // retorna undefined se não existe
+// ✅ CORRECTO
+queryFn: () => positions.getById(bookId).then(p => p ?? null)
+```
+### 5.3 foliate-js — view.init() requer argumento obrigatório
+```ts
+// ❌ ERRADO — causa "Cannot destructure property 'lastLocation' of undefined"
+await view.init();
+// ✅ CORRECTO
+await view.init(startCfi ? { lastLocation: startCfi } : {});
+```
+### 5.4 useBreakpoint — usar useSyncExternalStore
+```ts
+// ❌ ERRADO — viola react-hooks/set-state-in-effect (eslint-plugin-react-hooks 7.x)
+const [isMobile, setIsMobile] = useState(false);
+useEffect(() => { ... setIsMobile(...) ... }, []);
+// ✅ CORRECTO — usar useSyncExternalStore
+// Ver src/lib/utils/useBreakpoint.ts para implementação completa
+```
+### 5.5 CSS Modules com noUncheckedIndexedAccess
+```ts
+// ❌ ERRADO — styles.foo é string | undefined
+className={styles.root}
+// ✅ CORRECTO — usar helper cn()
+import { cn } from '@/lib/utils/cn';
+className={cn(styles.root)}
+// cn() está em src/lib/utils/cn.ts
+```
+### 5.6 exactOptionalPropertyTypes — props opcionais
+```tsx
+// ❌ ERRADO — passa undefined a prop opcional
+<Component currentHref={currentTocHref} />  // currentTocHref pode ser undefined
+// ✅ CORRECTO — conditional spread
+<Component {...(currentTocHref !== undefined ? { currentHref: currentTocHref } : {})} />
+```
+### 5.7 Refs do renderer — nunca ler durante render
+```tsx
+// ❌ ERRADO — lê ref durante render
+<PanelSearch renderer={rendererRef.current} />
+// ✅ CORRECTO — passa getter function (lida apenas em callbacks)
+const getRenderer = useCallback(() => rendererRef.current, []);
+<PanelSearch getRenderer={getRenderer} />
+```
+### 5.8 PanelSearch dentro de PanelOverlay
+```tsx
+// PanelSearch tem layout flex-column interno → usar noPadding
+<PanelOverlay title="Pesquisa" noPadding>
+  <PanelSearch getRenderer={getRenderer} onJumpTo={handleJumpTo} />
+</PanelOverlay>
+// Sem noPadding, o overflow do body conflitua com o scroll interno do PanelSearch
+```
+### 5.9 foliate-js shadow DOM fechado — implicação para testes e2e
+O `foliate-view` e `foliate-paginator` usam `shadowRoot mode: 'closed'`. Consequências:
+- `page.waitForFunction` não consegue aceder ao conteúdo do iframe
+- `page.frames()` não lista o iframe (está dentro do shadow fechado)
+- **Solução para testes:** validar via IndexedDB (posição, highlights) em vez de conteúdo do iframe
+- **Solução para TTS:** renderer expõe `getActiveText()` e `markTtsPosition()` como métodos públicos
+### 5.10 Push para GitHub — usar sempre remote `pat`
+```bash
+# O remote `origin` aponta para proxy local que retorna 403
+# USAR SEMPRE:
+git push pat <branch>
+# Para sincronizar tracking ref do origin (cosmético):
+git fetch origin <branch>
+```
+### 5.11 Vitest — excluir testes e2e
+```ts
+// vite.config.ts
+test: {
+  exclude: ['tests/e2e/**', ...defaultExclude]
+}
+```
+---
+## 6. Fases de Implementação
+### Convenção de gates
 ```bash
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm build
 ```
-
-Reporta ao utilizador:
-1. O que foi feito (resumo de 5 linhas máximo)
-2. Comandos para verificar manualmente (`pnpm dev`)
-3. Critérios de aceitação cumpridos da lista da fase
-4. Pergunta explícita: "Posso prosseguir para a Fase X?"
-
-**Não inicies a fase seguinte sem resposta afirmativa.**
-
+Reporta: o que foi feito (max 5 linhas) + critérios cumpridos + "Posso prosseguir para Fase X?"
+**Não avança sem resposta afirmativa.**
 ---
-
-### FASE 0 — Bootstrap do projecto
-**Objectivo:** repositório funcional, dependências instaladas, dev server a correr, Tauri arranca.
-
-**Acções:**
-1. `pnpm create vite cat-epub --template react-ts`
-2. `cd cat-epub && pnpm install`
-3. `pnpm add -D @tauri-apps/cli` e `pnpm tauri init` com bundle identifier `com.kouran.catepub`
-4. `pnpm add react-router-dom zustand dexie @tanstack/react-query foliate-js ts-fsrs ulid date-fns marked dompurify`
-5. `pnpm add -D vitest @testing-library/react @testing-library/jest-dom @vitest/ui playwright eslint prettier eslint-config-prettier eslint-plugin-react-hooks @typescript-eslint/parser @typescript-eslint/eslint-plugin vite-plugin-pwa`
-6. Configurar `tsconfig.json` com `"strict": true`, `"noUncheckedIndexedAccess": true`, `"exactOptionalPropertyTypes": true`.
-7. Configurar ESLint + Prettier (regras: sem default exports excepto routes, sem `any` excepto em `@ts-expect-error` justificado).
-8. Criar `.editorconfig` (LF, 2 espaços, UTF-8).
-9. Criar estrutura de directórios da Secção 2 (apenas pastas + `index.ts` placeholders).
-10. `git init`, primeiro commit: `chore: bootstrap cat-epub`.
-
-**Critérios de aceitação:**
-- [ ] `pnpm dev` abre Vite em `http://localhost:5173` com página em branco
-- [ ] `pnpm tauri dev` abre janela desktop
-- [ ] `pnpm typecheck` passa sem erros
-- [ ] `pnpm lint` passa sem erros
-- [ ] Estrutura de directórios da Secção 2 existe
-
-**NÃO fazer nesta fase:** começar a portar componentes do protótipo. Apenas bootstrap.
-
+### ✅ FASE 0 — Bootstrap (COMPLETA)
+React 19, Vite 8, TS 6, Tauri 2 init (`com.kouran.catepub`), pnpm, estrutura de directórios, ESLint strict, Prettier.
+- Commit: `68c16c0 chore: bootstrap cat-epub`
+### ✅ FASE 1 — Sistema de design e tema (COMPLETA)
+4 temas CSS, 4 fontes locais (woff2), Zustand prefs com Dexie adapter, applyTheme(), resolveTheme('auto').
+- 9 testes · Commit: `2bfabab feat(theme): design system and theme switching`
+### ✅ FASE 2 — Layout e navegação (COMPLETA)
+React Router 6, Sidebar colapsável, MobileNav, MobileTopBar, useBreakpoint (useSyncExternalStore), isReaderRoute (oculta chrome no leitor via JSX, não display:none).
+- 18 testes · Commit: `8ddcc9d feat(nav): wire router and responsive chrome`
+### ✅ FASE 3 — Camada de base de dados (COMPLETA)
+CatEpubDB Dexie v1, repositórios CRUD, seed dev com 3 livros lusófonos reais (Nana/Émile Zola, Os Maias/Eça de Queirós, Mensagem/Fernando Pessoa, A Sibila/Agustina Bessa-Luís).
+- 23 testes · Commit: `c504fc6 feat(db): canonical Dexie schema`
+### ✅ FASE 4 — EPUB renderer (COMPLETA + bugs corrigidos)
+foliate-js submodule, parser.ts, renderer.ts (API completa), ImportDropzone (SHA-256 dedup), reader route (posição persistida debounce 1s).
+**Bugs corrigidos nesta fase:**
+- `view.init({})` em vez de `view.init()` (ver §5.3)
+- `useShallow` no usePrefs (ver §5.1)
+- queryFn `?? null` (ver §5.2)
+- Vitest excluir e2e (ver §5.11)
+- 6 testes e2e (smoke + phase6) · Commit: `f624555 feat(epub): import + render via foliate-js`
+### ✅ FASE 5 — Home e Biblioteca (COMPLETA)
+Home com saudação por período, stats reais, "Continuar a ler" + "Lidos recentemente", empty state CatEmpty. Library com grid/lista, filtros, categorias, drag-and-drop, eliminação com dupla confirmação, BookCover procedural.
+- Commit: `f78f398 feat(library): home and library screens`
+### ✅ FASE 6 — Anotações (COMPLETA)
+HighlightToolbar (5 cores semânticas, floating sobre selecção do iframe via frameElement coords), PanelNotes (filtros + edição markdown + tags hierárquicas), notas globais `/notes` com exportação `.md`.
+- 66 testes · Commit: `51a03e2 feat(annotations): highlights, notes, export`
+### ✅ FASE 7 — Modos de leitura (COMPLETA)
+PanelSettings com sliders live, modo scroll/paginado (default: paginado), modo foco (zero chrome), check-ins de atenção (cria nota automática), transição automática de tema, Bionic Reading toggle (com aviso experimental).
+- Commit: `f961ea3 feat(reading): focus mode, typography panel, auto-theme`
+### ✅ FASE 8 — Pesquisa e índice (COMPLETA)
+PanelTOC hierárquico (destaque `border-left` no capítulo activo, `aria-current`), searchInBook (cancelável via AbortSignal, yield entre secções), PanelSearch, busca global `/search` (Cmd+K, contexto 30 chars, `<mark>` inline).
+- 91 testes · Commit: `a944ecc feat(search): TOC, in-book search, global search`
+### ✅ FASE 9 — Camada de IA (COMPLETA)
+Cliente Anthropic (`isAiEnabled()` guard), embeddings locais (Xenova/all-MiniLM-L6-v2, background job ao importar, progress na Library), RAG (cosine similarity + top-K), AiPopover (definir/traduzir no toolbar), PanelChat (RAG + citações `[Passagem N]` clicáveis).
+- Aviso de privacidade em Settings: "As queries de chat são enviadas para a Anthropic. Os embeddings ficam no teu dispositivo."
+- 111 testes · Commits: B1–B5
+### ✅ FASE 10 — FSRS (COMPLETA)
+scheduler.ts (FSRS-4.5, `createCard/scheduleCard/getDueCards/getDueCount`), card-generator.ts (highlightToCard + generateWithAi com dependency injection), botão Flashcard no HighlightToolbar (+ opção IA), daily review completa (front/back/4 ratings/deep-link "Ver no livro"), badge de contagem na Sidebar (polling 5min).
+- 128 testes · Commits: C1–C5
+### ✅ FASE 11 — Métricas e TTS (COMPLETA)
+Tracking de sessões (auto-pausa 60s inactividade), StatsBlock com dados reais + gráfico SVG 7 dias, "Última leitura" na Library (date-fns formatDistanceToNow), WebSpeechTTS (pt-PT auto, boundary callbacks, markTtsPosition no renderer), botão headphones no ReaderTopBar, pausa automática quando PanelChat abre.
+- 136 testes · Commits: D1–D5
+### ✅ FASE 12 — Sincronização opt-in (COMPLETA)
+`supabase/schema.sql` (tabelas + RLS `auth.uid() = user_id`), supabase.ts (signIn magic link, pushChanges/pullChanges, resolveConflicts last-write-wins), sync_queue offline (event `online` drena), useSyncTrigger em RootLayout (start + debounce 30s), Settings secção Sync.
+**NUNCA sincroniza `fileBlob`** — apenas metadata. EPUBs ficam no dispositivo.
+- 8 testes sync · Commits: E1–E5
 ---
-
-### FASE 1 — Sistema de design e tema
-**Objectivo:** todos os tokens CSS aplicados, troca de tema funcional, fontes carregadas localmente.
-
-**Acções:**
-1. Descarregar fontes Pixelify Sans (Google Fonts), Lora, Inter, Atkinson Hyperlegible para `src/assets/fonts/` (formatos .woff2).
-2. Escrever `src/styles/globals.css` com reset + `@font-face` + variáveis base.
-3. Escrever `src/styles/themes.css` com as 4 classes de tema da Secção 3.1.
-4. Escrever `src/lib/theme/tokens.ts` exportando os nomes das variáveis tipados.
-5. Escrever `src/lib/theme/apply.ts` com função `applyTheme(theme: Theme): void` que adiciona/remove classes ao `<html>`.
-6. Implementar Zustand store em `src/lib/store/prefs.ts` com persist middleware (Dexie via custom storage adapter).
-7. Implementar componente de teste `<ThemeShowcase />` em `src/components/shared/ThemeShowcase.tsx` que exibe 4 quadrados (um por tema) com texto de amostra em cada tipografia.
-8. Render essa showcase em `App.tsx` temporariamente.
-
-**Critérios de aceitação:**
-- [ ] As 4 fontes carregam sem flash (FOUT mínimo via `font-display: swap`)
-- [ ] Trocar tema via botões altera todas as cores em <50 ms
-- [ ] Pixelify Sans mostra-se no logo "Cat Epub"
-- [ ] `pnpm test` passa um teste unitário sobre `applyTheme()`
-
----
-
-### FASE 2 — Layout e navegação
-**Objectivo:** estrutura de rotas, sidebar desktop, bottom nav mobile, breakpoints funcionais.
-
-**Acções:**
-1. Configurar React Router 6 com layout root `src/routes/index.tsx`.
-2. Portar `Sidebar.tsx` do protótipo (linhas 128–209 do `Cat Epub Reader.html`) para `src/components/nav/Sidebar.tsx` em TS.
-3. Portar `MobileNav.tsx` (linhas 868–893) para `src/components/nav/MobileNav.tsx`.
-4. Implementar hook `useBreakpoint()` em `src/lib/utils/useBreakpoint.ts` com breakpoint mobile a 768 px.
-5. Implementar `MobileTopBar.tsx`.
-6. Criar páginas vazias para cada rota (Home, Library, Search, Notes, Review, Settings) com apenas um `<h1>`.
-7. Implementar lógica: se rota === `/reader/:id`, esconder sidebar e bottom nav.
-
-**Critérios de aceitação:**
-- [ ] No desktop (>=768 px): sidebar visível, navegável, colapsável
-- [ ] No mobile: bottom nav com 4 itens, hamburger abre overlay com sidebar
-- [ ] Navegar entre rotas mantém o tema
-- [ ] No reader, ambos sidebar e bottom nav desaparecem
-
----
-
-### FASE 3 — Camada de base de dados
-**Objectivo:** Dexie operacional, repositórios CRUD com testes.
-
-**Acções:**
-1. Implementar `src/lib/db/schema.ts` exactamente como na Secção 4.1.
-2. Implementar repositórios em `src/lib/db/{books,highlights,notes,bookmarks,flashcards,sessions}.ts` com funções: `getAll`, `getById`, `add`, `update`, `delete`, `query`. Cada repositório exporta apenas funções puras async — sem classes.
-3. Escrever testes unitários para cada repositório em `tests/unit/db.test.ts` usando `fake-indexeddb`.
-4. Criar seed inicial em `src/lib/db/seed.ts` que popula 3 livros de exemplo (apenas em modo `import.meta.env.DEV`).
-5. Criar hook `useBooks()` em `src/lib/store/library.ts` que usa TanStack Query para fetch reativo.
-
-**Critérios de aceitação:**
-- [ ] Todos os testes de DB passam (>=15 testes)
-- [ ] DevTools do browser mostram database `CatEpub` em IndexedDB
-- [ ] Em modo dev, 3 livros aparecem ao iniciar pela primeira vez
-- [ ] Reload da página preserva estado
-
----
-
-### FASE 4 — Importação e renderização de EPUB (CORE)
-**Objectivo:** importar `.epub` por drag-and-drop, parsear metadata, extrair capa, renderizar conteúdo.
-
-**Acções:**
-1. Estudar a API de `foliate-js`. Cria `src/lib/epub/parser.ts` que expõe:
-   - `parseEpub(file: File): Promise<{ metadata, spine, manifest, coverBlob }>`
-   - `openEpubBook(blob: Blob): Promise<EpubInstance>`
-2. Implementar `src/components/library/ImportDropzone.tsx`:
-   - Aceita drop de ficheiros `.epub`
-   - Aceita selecção via input
-   - Mostra progresso (parsing, extracção de capa, gravação)
-   - Detecta duplicados via `fileHash` (SHA-256)
-   - Erro graceful para ficheiros inválidos
-3. Implementar `src/lib/epub/renderer.ts` que monta um `<iframe>` controlado dentro de `<ReaderSurface />`:
-   - Aplica CSS dinâmico baseado em prefs (font, size, line-height, theme)
-   - Expõe API: `goToCfi(cfi)`, `nextPage()`, `prevPage()`, `getCurrentCfi()`, `onLocationChange(cb)`, `onSelectionChange(cb)`
-4. Implementar `src/components/reader/ReaderSurface.tsx` que monta o renderer.
-5. Implementar página `src/routes/reader.tsx`:
-   - Carrega o livro pelo `:id` da URL
-   - Restaura posição (`ReadingPosition`) ou começa do início
-   - Persiste posição em cada mudança de location (debounced 1s)
-
-**Critérios de aceitação:**
-- [ ] Importar um EPUB de teste (e.g., um livro do Project Gutenberg) cria entrada na DB
-- [ ] Capa é extraída e mostrada na biblioteca
-- [ ] Abrir o livro renderiza o conteúdo do primeiro capítulo
-- [ ] Mudar de página com setas, gestos (mobile swipe), e cliques laterais funciona
-- [ ] Fechar e reabrir restaura a posição exacta
-- [ ] Mudar tipografia em `Settings` reflecte no leitor sem reload
-
-**Recursos:**
-- foliate-js docs: https://github.com/johnfactotum/foliate-js
-- Estuda como Readest implementa: https://github.com/readest/readest
-
----
-
-### FASE 5 — Ecrãs Home e Biblioteca
-**Objectivo:** portar Home e Library do protótipo para arquitectura real, ligados à DB.
-
-**Acções:**
-1. Portar `HomeScreen` (linhas 211–310) para `src/routes/home.tsx`:
-   - "Continuar a ler" puxa livros com `progress > 0 && progress < 100`
-   - "Lidos recentemente" puxa por `lastReadAt desc`
-   - Estatísticas calculadas a partir da DB (não hardcoded)
-   - Saudação dependente da hora local: "Bom dia/tarde/noite, leitor"
-2. Portar `LibraryScreen` (linhas 312–500ish) para `src/routes/library.tsx`:
-   - Grid + List view toggle (preservar preferência)
-   - Filtros por categoria (extraídos dinamicamente das tags)
-   - Ordenação: por título, autor, progresso, último acesso, data de adição
-   - Drag-and-drop de EPUB para importar
-   - Click numa capa abre `/reader/:id`
-   - Botão "..." abre menu: editar metadados, mover para categoria, eliminar (com confirmação dupla)
-3. Implementar `src/components/library/BookCover.tsx`:
-   - Se `coverBlob` existe, mostra-a
-   - Caso contrário, gera capa procedural com `coverHue` (como no protótipo)
-
-**Critérios de aceitação:**
-- [ ] Home mostra dados reais da DB
-- [ ] Library renderiza grid responsivo (4 cols desktop, 3 tablet, 2 mobile)
-- [ ] Importar 5 livros via drag-and-drop funciona
-- [ ] Filtros e ordenação funcionam sem reload
-- [ ] Eliminar um livro pede confirmação e remove da DB
-
----
-
-### FASE 6 — Sistema de anotações (highlights e notas)
-**Objectivo:** anotação como cidadã de primeira classe — 5 cores semânticas, notas em markdown, exportação.
-
-**Acções:**
-1. Implementar `src/components/reader/HighlightToolbar.tsx`:
-   - Aparece flutuante quando há texto seleccionado (event `selectionchange` no iframe)
-   - 5 botões circulares de cor (yellow, green, blue, pink, purple)
-   - Botão de "Adicionar nota" (abre modal com textarea markdown)
-   - Botão de "Copiar"
-   - Botão de "Definir" (placeholder, fase 9)
-   - Botão de "Traduzir" (placeholder, fase 9)
-2. Persistir highlight: `cfiRange`, `text`, `context` (50 chars antes/depois), `color`, `bookId`.
-3. Renderizar highlights ao reabrir o livro: aplicar overlay coloridos por CFI no iframe (foliate-js suporta isto via `addAnnotation`).
-4. Implementar `src/components/reader/PanelNotes.tsx`:
-   - Lista todos os highlights/notas do livro corrente
-   - Filtros por cor, por tag
-   - Edição inline da nota (markdown com preview)
-   - Click salta para CFI no leitor
-5. Implementar página `src/routes/notes.tsx`:
-   - Vista global de todas as notas, agrupadas por livro
-   - Busca textual full-text
-   - Exportação: botão "Exportar tudo" → gera ficheiro `.md` por livro com formato:
-     ```markdown
-     # {Título}
-     *{Autor}*
-     
-     > {texto do highlight}
-     
-     **Nota:** {nota}
-     **Tags:** {tags}
-     **Data:** {createdAt}
-     ```
-6. Configuração de tags:
-   - Input com autocomplete baseado em tags existentes
-   - Suporte a hierarquia via `/`: `estratégia/jogos/poker`
-
-**Critérios de aceitação:**
-- [ ] Seleccionar texto faz aparecer o toolbar em <100 ms
-- [ ] Aplicar uma cor cria highlight visível e persistente
-- [ ] Reabrir o livro mostra os highlights anteriores
-- [ ] Adicionar nota markdown funciona com preview
-- [ ] Exportar gera `.md` válido com todas as notas
-- [ ] Tags hierárquicas funcionam: filtrar por `estratégia` mostra também `estratégia/jogos`
-
----
-
-### FASE 7 — Modos de leitura e personalização avançada
-**Objectivo:** controlo fino sobre tipografia, modos de paginação, modo foco.
-
-**Acções:**
-1. Implementar `src/components/reader/PanelSettings.tsx` (overlay no leitor):
-   - Sliders: fonte (px), entrelinhamento, largura de página, espaçamento de parágrafo
-   - Segmented control: tipografia (Serif / Sans / Acessível) e modo de paginação (Paginado / Scroll)
-   - Toggle: progresso visível, números de página, justificação do texto
-   - Aplicação imediata (live preview)
-2. Implementar **modo foco**:
-   - Toggle em `PanelSettings`
-   - Quando activo: esconde tudo excepto texto. Apenas gestos disponíveis.
-   - Check-ins de atenção: a cada N minutos (configurável, default 0 = off), pausa o leitor e mostra dialog: "O que reteve nos últimos {N} minutos?" — campo de texto livre que cria automaticamente uma nota.
-3. Implementar **transição automática de tema**:
-   - Pref `themeAutoSchedule` permite configurar hora de transição light→dark
-   - Hook `useAutoTheme()` que monitoriza hora local e aplica tema gradualmente (transição CSS de 15 minutos)
-4. Implementar **modo Bionic Reading** (toggle opcional, default off):
-   - Função utilitária que processa o HTML do iframe e adiciona `<b>` aos primeiros 30–50% das letras de cada palavra
-   - Aviso na UI: "Funcionalidade experimental. Investigação recente sugere que pode prejudicar leitores típicos."
-
-**Critérios de aceitação:**
-- [ ] Slider de fonte ajusta texto em tempo real, sem reload
-- [ ] Modo scroll vs paginado funciona
-- [ ] Modo foco esconde 100% do chrome
-- [ ] Check-in dispara à hora certa e cria nota
-- [ ] Transição automática funciona ao chegar à hora configurada
-- [ ] Bionic toggle funciona
-
----
-
-### FASE 8 — Pesquisa e índice
-**Objectivo:** TOC navegável, busca dentro do livro, busca global.
-
-**Acções:**
-1. Implementar `src/components/reader/PanelTOC.tsx`:
-   - Extrai TOC via foliate-js (`book.toc`)
-   - Hierárquica (capítulos e subcapítulos)
-   - Click salta para o capítulo
-   - Indicador de capítulo actual
-2. Implementar busca dentro do livro em `src/lib/epub/search.ts`:
-   - Procura full-text em todos os capítulos
-   - Retorna excertos com 30 chars antes e depois
-   - Click salta para a posição
-3. Implementar `src/routes/search.tsx`:
-   - Busca em todos os livros, notas e highlights
-   - Resultados agrupados por origem
-   - Atalho global `Ctrl/Cmd+K`
-
-**Critérios de aceitação:**
-- [ ] TOC mostra estrutura completa de um EPUB com 30+ capítulos
-- [ ] Busca dentro do livro encontra todas as ocorrências de uma palavra
-- [ ] Busca global retorna resultados de livros, highlights e notas
-- [ ] `Cmd+K` abre busca de qualquer ecrã
-
----
-
-### FASE 9 — Camada de IA
-**Objectivo:** definição contextual, tradução, chat com o livro (RAG local).
-
-**Acções:**
-1. Configurar `src/lib/ai/client.ts`:
-   - Cliente Anthropic API (modelo `claude-opus-4-7` ou `claude-sonnet-4-6`)
-   - API key armazenada apenas localmente em `Preferences.aiApiKey`
-   - Toggle em settings para activar/desactivar IA
-2. Definição contextual (em `HighlightToolbar`):
-   - Botão "Definir" envia: palavra seleccionada + parágrafo de contexto
-   - Prompt: "Define {palavra} considerando o contexto: {parágrafo}. Responde em português europeu, 2 frases."
-   - Resposta exibida em popover
-3. Tradução in-place:
-   - Botão "Traduzir" envia o texto seleccionado
-   - Prompt: "Traduz para português europeu preservando o tom literário: {texto}"
-   - Toggle de idiomas se necessário
-4. Chat com o livro (RAG):
-   - Implementar `src/lib/ai/embeddings.ts` usando `@xenova/transformers` (modelo `all-MiniLM-L6-v2`, runs in-browser, ~25 MB)
-   - Ao importar um livro, gerar embeddings de cada capítulo (background job, com progress bar)
-   - Persistir embeddings em IndexedDB
-   - Implementar `src/lib/ai/rag.ts`:
-     - Recebe pergunta do utilizador
-     - Gera embedding da pergunta
-     - Calcula cosine similarity contra todos os chunks do livro
-     - Retorna top-K (K=5) chunks mais relevantes
-   - Implementar `src/components/reader/PanelChat.tsx`:
-     - Painel lateral direito
-     - Conversa com o livro: utilizador pergunta, IA responde citando passagens com âncoras navegáveis (`[Cap. 3, pág. 47]`)
-     - System prompt: "És um assistente que responde APENAS com base nas passagens fornecidas. Se a resposta não está nas passagens, diz que não encontraste. Cita sempre o capítulo."
-
-**Critérios de aceitação:**
-- [ ] Definir uma palavra retorna definição em <2s
-- [ ] Traduzir um parágrafo funciona
-- [ ] Importar um livro gera embeddings (com indicador de progresso)
-- [ ] Pergunta no chat retorna resposta citando passagens
-- [ ] Click numa citação salta para o CFI correcto
-- [ ] Sem API key configurada, todas as funcionalidades de IA estão desactivadas com mensagem clara
-
-**Aviso de privacidade:** Documentar em `Settings > IA` que as queries de chat são enviadas para a Anthropic. Os embeddings são locais.
-
----
-
-### FASE 10 — Sistema de repetição espaçada (FSRS)
-**Objectivo:** transformar highlights em flashcards com agendamento óptimo.
-
-**Acções:**
-1. Implementar `src/lib/srs/scheduler.ts` como wrapper sobre `ts-fsrs`:
-   - `schedule(card, rating: 'again' | 'hard' | 'good' | 'easy'): UpdatedCard`
-   - `getDueToday(): Promise<Flashcard[]>`
-   - Default parameters do FSRS-4.5
-2. Implementar `src/lib/srs/card-generator.ts`:
-   - Recebe um highlight
-   - Se highlight tem `note`: usa note como `back`, primeira frase do `text` como `front`
-   - Caso contrário: opcional usar IA para gerar pergunta-resposta automaticamente (botão "Gerar com IA")
-3. Implementar `src/routes/review.tsx`:
-   - Mostra um card de cada vez
-   - Apresenta `front`, click revela `back`
-   - 4 botões: Again / Hard / Good / Easy
-   - Após decisão, agenda próximo review e mostra próximo card
-   - Quando não há cards: mostra "Nada para hoje. Próxima revisão: {data}."
-4. Notificação visual no sidebar/bottom nav: badge com número de cards due.
-5. Deep-linking: cada card tem botão "Ver no livro" que salta para o CFI do highlight original.
-
-**Critérios de aceitação:**
-- [ ] Criar flashcard a partir de highlight funciona com 1 click
-- [ ] Algoritmo FSRS agenda correctamente (testar com mock dates)
-- [ ] Daily review mostra cards due
-- [ ] Deep-link salta para a passagem correcta
-- [ ] Badge mostra contagem real
-
----
-
-### FASE 11 — Métricas e Text-to-Speech
-**Objectivo:** métricas operacionais (não vaidade) e TTS funcional.
-
-**Acções:**
-1. Implementar tracking de sessões em `src/lib/db/sessions.ts`:
-   - Cada sessão de leitura: start, end, pagesRead, wordsRead (estimado)
-   - Pausada após 60s de inactividade
-2. Implementar `src/components/home/StatsBlock.tsx` com métricas reais:
-   - Tempo médio por sessão (últimos 7 dias)
-   - Páginas lidas por dia (gráfico simples)
-   - Velocidade média (wpm)
-   - Livro mais lido nesta semana
-3. Em `Library`, adicionar coluna "Tempo desde último contacto" (combate ao decay).
-4. Implementar TTS:
-   - `src/lib/tts/webspeech.ts` usando `SpeechSynthesisUtterance`
-   - Voz seleccionável (pt-PT por default se disponível)
-   - Velocidade configurável (0.5x–2x)
-   - Sincronização com leitor: highlight da frase a ser lida
-   - Botão de play no `ReaderTopBar`
-5. (Opcional) `src/lib/tts/elevenlabs.ts`:
-   - Cliente para ElevenLabs API
-   - Apenas se utilizador configurar API key
-   - Cache de áudio por capítulo em IndexedDB
-
-**Critérios de aceitação:**
-- [ ] Sessões são registadas correctamente (testar com mock setTimeout)
-- [ ] Stats mostram dados reais
-- [ ] Web Speech TTS lê o capítulo actual
-- [ ] Frase actual fica destacada
-- [ ] Pause/resume funciona
-
----
-
-### FASE 12 — Sincronização (opt-in)
-**Objectivo:** sync entre dispositivos via Supabase, com conflict resolution last-write-wins.
-
-**Acções:**
-1. Setup Supabase project (utilizador faz manualmente; documentar no README).
-2. Schema SQL para tabelas: `books_meta`, `highlights`, `notes`, `bookmarks`, `flashcards`, `positions`, `prefs`.
-3. RLS policies: cada utilizador só vê os seus dados (auth.uid() = user_id).
-4. **NÃO sincronizar `fileBlob`** dos livros — apenas metadata. Os ficheiros EPUB ficam no dispositivo.
-5. Implementar `src/lib/sync/supabase.ts`:
-   - `signIn(email)` via magic link
-   - `pushChanges()`: envia mudanças locais desde último sync
-   - `pullChanges()`: descarrega mudanças remotas
-   - `resolveConflicts()`: last-write-wins por `updatedAt`
-6. Implementar trigger de sync:
-   - On app start (se logged in)
-   - Após cada mudança (debounce 30s)
-   - Manual via botão em Settings
-7. Indicador visual no sidebar: "Sincronizado há X minutos" / "A sincronizar..." / "Erro".
-
-**Critérios de aceitação:**
-- [ ] Login via magic link funciona
-- [ ] Highlights criados num dispositivo aparecem noutro em <1 minuto
-- [ ] Mudar pref num dispositivo propaga
-- [ ] Modo offline mantém funcionalidade total
-- [ ] Reconectar após offline sincroniza tudo
-
-**Aviso:** Esta fase é opt-in. Por defeito, `syncEnabled: false`.
-
----
-
-### FASE 13 — Polish e build de produção
-**Objectivo:** testes e2e, build optimizado, distribuíveis Tauri.
-
-**Acções:**
-1. Escrever testes Playwright para fluxos críticos:
-   - Importar livro → abrir → ler → fazer highlight → fechar → reabrir (verifica persistência)
-   - Trocar tema → verificar todas as variáveis CSS
-   - Daily review com 3 cards
-2. Otimização de bundle: lazy loading de rotas (`React.lazy`), code splitting.
-3. Configurar PWA: manifest, service worker, offline shell.
-4. Configurar build Tauri para macOS (universal binary), Windows (.msi), Linux (.AppImage e .deb).
-5. README completo com:
-   - Screenshots
-   - Instalação (desktop e PWA)
-   - Configuração de IA / Sync
-   - Atalhos de teclado
-6. Atalhos de teclado globais:
-   - `Cmd/Ctrl+K`: busca global
-   - `Cmd/Ctrl+,`: settings
-   - `Cmd/Ctrl+B`: toggle sidebar
-   - No reader: `←/→`: páginas; `Espaço`: toggle UI; `H`: highlight amarelo; `B`: bookmark; `N`: nova nota; `F`: focus mode
-7. Logging mínimo: errors graves → console + Sentry (opcional).
-
-**Critérios de aceitação:**
-- [ ] Todos os testes e2e passam
-- [ ] Bundle inicial <300 KB gzipped
-- [ ] Lighthouse score >=95 em Performance/Accessibility/Best Practices
-- [ ] PWA instala no iOS Safari e Android Chrome
-- [ ] Build Tauri produz `.dmg`, `.msi` e `.AppImage` funcionais
-- [ ] Todos os atalhos de teclado documentados em Settings
-
----
-
-## 6. Convenções de código
-
-### 6.1 Naming
-- Componentes: PascalCase (`ReaderSurface.tsx`)
-- Hooks: camelCase com prefixo `use` (`useBreakpoint.ts`)
-- Funções utilitárias: camelCase (`debounce.ts`)
-- Tipos/Interfaces: PascalCase, sem prefixo `I`
-- Constantes: SCREAMING_SNAKE_CASE
-- CSS classes: kebab-case com BEM ligeiro (`.reader__bottom-bar--hidden`)
-
-### 6.2 Estrutura de componente
+### 🔄 FASE 13 — Polish e build de produção (A FAZER)
+**Objectivo:** app pronta para uso diário real. PWA instalável. Builds Tauri funcionais. README completo.
+**F1. Atalhos de teclado globais (completar/verificar):**
+- `Cmd/Ctrl+K` → busca global (feito Fase 8)
+- `Cmd/Ctrl+,` → settings
+- `Cmd/Ctrl+B` → toggle sidebar
+- No reader: `←/→` páginas · `Espaço` toggle UI · `H` highlight amarelo · `B` bookmark · `N` nota · `F` focus mode · `T` toggle TTS
+**F2. Lazy loading de rotas:**
 ```tsx
-import { type FC, useState } from 'react';
-import styles from './Component.module.css';
-
-interface Props {
-  // ordem: required → optional → callbacks
-  bookId: string;
-  variant?: 'compact' | 'expanded';
-  onSelect?: (id: string) => void;
-}
-
-export const Component: FC<Props> = ({ bookId, variant = 'compact', onSelect }) => {
-  const [open, setOpen] = useState(false);
-  // hooks first, handlers next, render last
-  return <div className={styles.root}>...</div>;
-};
+const Library = React.lazy(() => import('./library'));
+// Aplicar a todas as rotas excepto Home
 ```
-
-### 6.3 Commits (Conventional Commits)
-- `feat:` nova funcionalidade
-- `fix:` bug
-- `refactor:` refactor sem mudança de comportamento
-- `style:` apenas CSS
-- `test:` apenas testes
-- `docs:` documentação
-- `chore:` tooling
-
-### 6.4 Git workflow
-- `main`: sempre estável
-- Cada fase em branch `phase/N-nome` (ex.: `phase/4-epub-reader`)
-- Merge via squash commit no fim da fase
-- Tag `v0.{fase}.0` no fim de cada fase
-
----
-
-## 7. Checklist final de qualidade (executar antes de cada PR)
-
+**F3. PWA completo:**
+- `manifest.webmanifest` com ícones de gato em todos os tamanhos
+- Service worker via vite-plugin-pwa (Workbox, cache-first para assets, network-first para API)
+- Offline shell: quando sem rede, app continua 100% funcional
+- Instalar em iOS Safari (Add to Home Screen) e Android Chrome
+**F4. Build Tauri:**
+- macOS: universal binary (arm64 + x86_64) → `.dmg`
+- Windows: `.msi` via WiX
+- Linux: `.AppImage` e `.deb`
+- Bundle identifier: `com.kouran.catepub`
+- Ícone: CatLogo em todos os formatos (512px PNG → gerar variantes)
+**F5. Scan de pasta local (Tauri-only):**
+```rust
+// src-tauri/src/main.rs — comandos Tauri a implementar:
+// scan_library_folder(path: String) -> Vec<EpubFile>
+// watch_library_folder(path: String) -> watch daemon
+```
+- Settings > Biblioteca: campo "Pasta de livros" com botão "Escolher pasta"
+- Ao configurar: scan inicial de todos os `.epub` na pasta e subpastas
+- Watch daemon: detecta novos ficheiros e notifica a app (evento Tauri)
+- App recebe evento e importa automaticamente
+- **Apenas em Tauri** — não disponível em PWA (sem acesso ao filesystem)
+**F6. Conversão de formatos para EPUB (Tauri-only):**
+- Suporte a drop de `.pdf`, `.docx`, `.txt`, `.html`
+- Conversão via `pandoc` (binário incluído no bundle Tauri) ou `calibre` headless
+- Output: EPUB limpo e padronizado, guardado na pasta de livros configurada
+- **Fallback em PWA:** mensagem "Conversão disponível apenas na app desktop"
+**F7. Testes e2e completos (Playwright):**
+```ts
+// Fluxos obrigatórios:
+// 1. importar → abrir → ler → highlight → fechar → reabrir (verifica persistência)
+// 2. trocar tema → verificar todas as variáveis CSS
+// 3. daily review com 3 cards (criar via DB inject)
+// 4. TTS play → pause → resume → stop
+// 5. busca global com resultado clicável
+```
+**F8. README.md completo:**
+- Screenshots de cada ecrã (tirar com Playwright headless)
+- Instalação desktop (Tauri) e PWA
+- Configuração de API keys (Anthropic, Supabase, ElevenLabs)
+- Todos os atalhos de teclado
+- Como adicionar pasta de livros (Tauri)
+- Arquitectura técnica (para referência futura)
+**F9. Optimização de bundle:**
+- Target: bundle inicial <300 KB gzipped
+- Lighthouse score >=95 em Performance/Accessibility/Best Practices
+- transformers.js carregado apenas quando IA activa (dynamic import)
+**Gate 13:**
 ```bash
-pnpm typecheck                # Sem erros
-pnpm lint                     # Sem warnings
-pnpm test --run               # Todos passam
-pnpm test:e2e                 # Críticos passam
-pnpm build                    # Build sucede
-pnpm tauri build --debug      # Build Tauri sucede
+pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:e2e && pnpm build
+# + verificar manualmente: PWA instala · Tauri build corre · atalhos funcionam
 ```
-
 ---
-
-## 8. Recursos de referência
-
-- **Protótipo original:** ler integralmente `Cat Epub Reader.html`, `store.jsx`, `icons.jsx`, `tweaks-panel.jsx`. Tudo o que está visualmente lá deve ser preservado em essência.
+### 📋 FASE 14 — Features Pós-MVP (após Fase 13 aprovada)
+> Estas features foram discutidas e acordadas mas não fazem parte do MVP. Implementar apenas quando Fase 13 estiver completa e testada em uso real.
+**P1. Vista duas colunas (landscape):**
+- Terceiro modo de paginação além de paginado/scroll
+- Activo automaticamente em landscape em tablet/desktop wide
+- foliate-js suporta via renderer — implementar como opção no PanelSettings
+- Toggle manual nas Definições
+**P2. Edição de metadados:**
+- Modal de edição: título, autor, capa (upload ou URL), descrição, série, volume, tags, rating
+- **Não altera o ficheiro EPUB original** — guarda em DB (`books` table)
+- Acessível via botão "..." na Library card
+- Upload de capa personalizada → guarda como `coverBlob`
+**P3. Importação em massa:**
+- Aceitar múltiplos EPUBs em simultâneo (já parcialmente implementado no dropzone)
+- Progress bar global de importação ("Importando 12/47 livros...")
+- Detecção e skip de duplicados com relatório final
+- Timeout por livro (30s) com erro graceful
+**P4. Categorização automática por IA:**
+- Ao importar, enviar título + autor + descrição à Anthropic
+- Sugestão automática de categoria (Romance, Ficção Científica, Não-Ficção, etc.)
+- Utilizador confirma ou altera — nunca categoriza sem confirmação
+- Apenas se `aiProvider !== 'none'`
+**P5. ElevenLabs TTS (premium):**
+- `src/lib/tts/elevenlabs.ts` — cliente ElevenLabs API
+- Cache de áudio por capítulo em IndexedDB (blob)
+- Activado via API key nas Definições
+- Fallback automático para Web Speech se sem key
+**P6. Exportação avançada:**
+- Exportar highlights para Obsidian (`.md` com formato `[[wikilinks]]`)
+- Exportar para Notion via API
+- Exportar para Anki (`.apkg` via API)
+- Backup completo da biblioteca (ZIP: metadados + highlights + notas + flashcards, sem EPUBs)
+**P7. Modo leitura offline total (PWA melhorado):**
+- Pre-cache de EPUBs no service worker (opt-in por livro)
+- Sincronização automática de progresso quando volta à rede
+---
+## 7. Regras de Comportamento (invioláveis)
+1. **Lê antes de escrever.** Antes de modificar qualquer ficheiro existente, lê-o na íntegra.
+2. **Commits atómicos.** Um commit = uma ideia. Nunca commitar trabalho parcial.
+3. **Testa o que não é trivial.** SRS, sync, conflict resolution, parsing → testes obrigatórios.
+4. **Sem dependências não aprovadas.** Se precisas de lib nova, pergunta antes de instalar.
+5. **Sem optimização prematura.** Funcione primeiro. Performance na Fase 13.
+6. **Sem silenciar erros.** `try/catch` apenas para erros esperados. Erros verdadeiros propagam.
+7. **Sem API keys hardcoded.** Jamais. Lidas de `prefs.aiApiKey` ou env vars.
+8. **Push sempre via `pat` remote.** O origin proxy retorna 403.
+9. **Não toques em fases futuras.** Se estás na Fase 13, não implementas features da Fase 14.
+10. **Segue os padrões da §5.** Cada um resolve um bug real documentado.
+---
+## 8. Configuração de Credenciais (setup manual pelo utilizador)
+### 8.1 Supabase (para Fase 12)
+1. Criar projecto em supabase.com
+2. Executar `supabase/schema.sql` no SQL Editor
+3. Em Settings > Sincronização: inserir URL e anon key
+4. Clicar "Iniciar sessão" → magic link no email
+### 8.2 Anthropic (para Fase 9)
+1. Obter API key em console.anthropic.com
+2. Em Settings > IA: activar toggle + inserir key
+3. As queries de chat são enviadas à Anthropic. Os embeddings ficam locais.
+### 8.3 GitHub remote (para push)
+```bash
+# O remote origin retorna 403. Usar pat:
+git remote add pat https://ghp_TOKEN@github.com/bundaamarela/mkdir-cat-epub-cd-cat-epub-git-init.git
+git push pat claude/read-claude-section-10-IioJn
+```
+---
+## 9. Referências
+- **Protótipo:** `_prototype/Cat Epub Reader.html` — referência visual e de design
 - **foliate-js:** https://github.com/johnfactotum/foliate-js
-- **Readest (referência arquitectónica):** https://github.com/readest/readest
+- **Readest (arquitetura):** https://github.com/readest/readest
 - **ts-fsrs:** https://github.com/open-spaced-repetition/ts-fsrs
 - **Tauri 2:** https://v2.tauri.app
 - **Dexie.js:** https://dexie.org
 - **transformers.js:** https://huggingface.co/docs/transformers.js
 - **EPUB CFI spec:** https://idpf.org/epub/linking/cfi/
-
+- **WCAG contrast:** rácio mínimo 7:1 (AAA) para leitura prolongada
 ---
-
-## 9. Política de comportamento durante o desenvolvimento
-
-1. **Lê antes de escrever.** Antes de modificar um ficheiro existente, lê-o na íntegra.
-2. **Pequenos commits.** Um commit = uma ideia atómica.
-3. **Testa o que não é trivial.** SRS, parsing, sync, conflict resolution → todos com testes.
-4. **Não introduzas dependências sem aprovação.** Se uma fase precisa de uma lib que não está na Secção 1.1, pergunta primeiro.
-5. **Não optimizes prematuramente.** Funcione primeiro. Optimizar na Fase 13.
-6. **Não silences erros.** `try/catch` apenas para erros esperados; errors verdadeiros propagam.
-7. **Pergunta quando ambíguo.** Melhor uma pergunta do que uma decisão errada.
-8. **Não toques nas fases futuras.** Se a Fase 4 está em curso, não escrevas código da Fase 9 "porque é fácil".
-
+## 10. Comando de início de sessão
+Ao iniciar uma nova sessão Claude Code, confirma primeiro:
+1. "Li o CLAUDE.md v2.0 na íntegra."
+2. "Estado actual: Fases 0–12 completas, 136 testes. Branch: `claude/read-claude-section-10-IioJn`."
+3. "Próxima tarefa: [descreve o que vais fazer]."
+Aguarda confirmação do utilizador antes de começar.
 ---
-
-## 10. Comando inicial
-
-Quando estiveres pronto, executa o seguinte para começar:
-
-> "Li o `CLAUDE.md` na íntegra. Vou começar pela Fase 0. Antes de iniciar, confirmas que o nome do projecto é `cat-epub` e o bundle identifier é `com.kouran.catepub`?"
-
-Aguarda confirmação. Depois executa a Fase 0 e pára no gate.
-
----
-
-**Fim do prompt mestre.**
-
-> Versão 1.0 — Maio de 2026
-> Para Kouran, solo founder
+**Fim do documento mestre.**
+> Versão 2.0 — Maio de 2026 · Para Kouran, solo founder
+> Actualizado com: decisões reais de stack, bugs corrigidos, padrões estabelecidos, Fases 13–14
