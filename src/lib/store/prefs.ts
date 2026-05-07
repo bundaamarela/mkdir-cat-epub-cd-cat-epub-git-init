@@ -53,6 +53,7 @@ interface PrefsState extends Preferences {
   setFocusCheckinInterval: (m: number) => void;
   setTtsProvider: (p: TtsProvider) => void;
   setTtsRate: (r: number) => void;
+  setTtsVoice: (v: string | undefined) => void;
   setSyncEnabled: (v: boolean) => void;
   setAiProvider: (p: AiProvider) => void;
   setAiApiKey: (key: string | undefined) => void;
@@ -87,6 +88,17 @@ export const usePrefs = create<PrefsState>()(
       setFocusCheckinInterval: (focusCheckinInterval) => set({ focusCheckinInterval }),
       setTtsProvider: (ttsProvider) => set({ ttsProvider }),
       setTtsRate: (ttsRate) => set({ ttsRate }),
+      setTtsVoice: (ttsVoice) => {
+        if (ttsVoice === undefined) {
+          set((s) => {
+            const { ttsVoice: _omit, ...rest } = s;
+            void _omit;
+            return rest as PrefsState;
+          });
+        } else {
+          set({ ttsVoice });
+        }
+      },
       setSyncEnabled: (syncEnabled) => set({ syncEnabled }),
       setAiProvider: (aiProvider) => set({ aiProvider }),
       setAiApiKey: (aiApiKey) => {

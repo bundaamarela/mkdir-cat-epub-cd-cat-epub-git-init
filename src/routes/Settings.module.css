@@ -210,6 +210,24 @@
   border-color: var(--text);
 }
 
+.select {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.select:focus {
+  border-color: var(--text);
+}
+
 .notice {
   margin-top: 0.625rem;
   padding: 0.625rem 0.75rem;

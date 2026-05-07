@@ -38,6 +38,7 @@ export interface Preferences {
   focusCheckinInterval: number; // minutos; 0 = desligado
   ttsProvider: TtsProvider;
   ttsRate: number;
+  ttsVoice?: string;
   syncEnabled: boolean;
   aiProvider: AiProvider;
   aiApiKey?: string;

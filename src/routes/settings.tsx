@@ -1,4 +1,4 @@
-import { type CSSProperties, type FC, type ReactNode } from 'react';
+import { type CSSProperties, type FC, type ReactNode, useEffect, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 
 import { cn } from '@/lib/utils/cn';
@@ -89,8 +89,14 @@ const Settings: FC = () => {
       theme: s.theme,
       focusModeEnabled: s.focusModeEnabled,
       focusCheckinInterval: s.focusCheckinInterval,
+      ttsProvider: s.ttsProvider,
+      ttsRate: s.ttsRate,
+      ttsVoice: s.ttsVoice,
       aiProvider: s.aiProvider,
       aiApiKey: s.aiApiKey,
+      setTtsProvider: s.setTtsProvider,
+      setTtsRate: s.setTtsRate,
+      setTtsVoice: s.setTtsVoice,
       setFontFamily: s.setFontFamily,
       setFontSize: s.setFontSize,
       setLineHeight: s.setLineHeight,
@@ -105,6 +111,19 @@ const Settings: FC = () => {
   );
 
   const aiEnabled = p.aiProvider === 'anthropic';
+  const ttsEnabled = p.ttsProvider === 'webspeech';
+
+  const [ptVoices, setPtVoices] = useState<SpeechSynthesisVoice[]>([]);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    const load = (): void => {
+      const all = window.speechSynthesis.getVoices();
+      setPtVoices(all.filter((v) => v.lang === 'pt' || v.lang.startsWith('pt-')));
+    };
+    load();
+    window.speechSynthesis.addEventListener('voiceschanged', load);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
+  }, []);
 
   const previewStyle: CSSProperties = {
     fontFamily: FONT_VAR[p.fontFamily],
@@ -225,6 +244,56 @@ const Settings: FC = () => {
                 }
                 onChange={(v) => p.setFocusCheckinInterval(Math.round(v))}
               />
+            </div>
+          )}
+        </ToggleRow>
+      </div>
+
+      <div className={cn(styles.card)}>
+        <h2 className={cn(styles.cardTitle)}>Leitura em voz alta</h2>
+        <ToggleRow
+          label="Activar leitura em voz alta"
+          checked={ttsEnabled}
+          onChange={(v) => p.setTtsProvider(v ? 'webspeech' : 'elevenlabs')}
+        >
+          {ttsEnabled && (
+            <div className={cn(styles.subRow)}>
+              <div className={cn(styles.field)}>
+                <span className={cn(styles.fieldLabel)}>Velocidade</span>
+                <div className={cn(styles.segmented)}>
+                  {([0.5, 0.75, 1, 1.25, 1.5, 2] as const).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={cn(styles.segChip, p.ttsRate === r && styles.segChipActive)}
+                      onClick={() => p.setTtsRate(r)}
+                      aria-pressed={p.ttsRate === r}
+                    >
+                      {r}×
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {ptVoices.length > 0 && (
+                <div className={cn(styles.field)}>
+                  <label htmlFor="tts-voice" className={cn(styles.fieldLabel)}>
+                    Voz
+                  </label>
+                  <select
+                    id="tts-voice"
+                    className={cn(styles.select)}
+                    value={p.ttsVoice ?? ''}
+                    onChange={(e) => p.setTtsVoice(e.target.value || undefined)}
+                  >
+                    <option value="">Auto (pt-PT)</option>
+                    {ptVoices.map((v) => (
+                      <option key={v.name} value={v.name}>
+                        {v.name} ({v.lang})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
         </ToggleRow>
