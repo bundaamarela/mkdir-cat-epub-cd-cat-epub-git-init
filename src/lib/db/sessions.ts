@@ -1,3 +1,5 @@
+import { ulid } from 'ulid';
+
 import type { ReadingSession } from '@/types/flashcard';
 import { db } from './schema';
 
@@ -65,3 +67,37 @@ export const query = async (q: SessionQuery = {}): Promise<ReadingSession[]> => 
 };
 
 export const count = async (): Promise<number> => db.sessions.count();
+
+/** Cria uma nova sessão de leitura e devolve o seu id. */
+export const startSession = async (
+  bookId: string,
+  startCfi: string,
+  now: Date = new Date(),
+): Promise<string> => {
+  const s: ReadingSession = {
+    id: ulid(),
+    bookId,
+    startCfi,
+    startedAt: now.toISOString(),
+    pagesRead: 0,
+  };
+  await db.sessions.add(s);
+  return s.id;
+};
+
+/** Termina uma sessão: grava endCfi, tempo e palavras estimadas. */
+export const endSession = async (
+  id: string,
+  endCfi: string | undefined,
+  pagesRead: number,
+  now: Date = new Date(),
+): Promise<void> => {
+  const wordsRead = Math.max(0, pagesRead) * 250; // ~250 palavras por página estimadas
+  const patch: Partial<ReadingSession> = {
+    endedAt: now.toISOString(),
+    pagesRead,
+    wordsRead,
+    ...(endCfi !== undefined ? { endCfi } : {}),
+  };
+  await db.sessions.update(id, patch);
+};
