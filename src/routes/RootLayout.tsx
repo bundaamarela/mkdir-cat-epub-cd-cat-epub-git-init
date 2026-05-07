@@ -5,6 +5,7 @@ import { MobileNav } from '@/components/nav/MobileNav';
 import { MobileTopBar } from '@/components/nav/MobileTopBar';
 import { Sidebar } from '@/components/nav/Sidebar';
 import { useSyncTrigger } from '@/lib/sync/useSyncTrigger';
+import { usePrefs } from '@/lib/store/prefs';
 import { cn } from '@/lib/utils/cn';
 import { useBreakpoint } from '@/lib/utils/useBreakpoint';
 import { isReaderRoute } from './route-utils';
@@ -14,23 +15,33 @@ export const RootLayout: FC = () => {
   const { pathname } = useLocation();
   const { isMobile } = useBreakpoint();
   const navigate = useNavigate();
+  const sidebarCollapsed = usePrefs((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = usePrefs((s) => s.setSidebarCollapsed);
   // Mount sync trigger globally — no-op when sync is disabled.
   useSyncTrigger();
 
-  // Global Cmd/Ctrl+K → open search from any screen, including inside the reader.
+  // Global keyboard shortcuts — ignored when focus is in an input/textarea.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (!((e.metaKey || e.ctrlKey) && e.key === 'k')) return;
       if (e.target instanceof HTMLElement) {
         const tag = e.target.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
       }
-      e.preventDefault();
-      void navigate('/search');
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === 'k') {
+        e.preventDefault();
+        void navigate('/search');
+      } else if (mod && e.key === ',') {
+        e.preventDefault();
+        void navigate('/settings');
+      } else if (mod && e.key === 'b') {
+        e.preventDefault();
+        setSidebarCollapsed(!sidebarCollapsed);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navigate]);
+  }, [navigate, sidebarCollapsed, setSidebarCollapsed]);
 
   // No leitor não há chrome: nem Sidebar, nem MobileNav, nem MobileTopBar
   // são montados (não basta esconder com display:none — os efeitos correriam).

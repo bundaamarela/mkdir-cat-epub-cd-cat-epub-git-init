@@ -26,6 +26,7 @@ import {
 import { searchInBook } from '@/lib/epub/search';
 import * as positions from '@/lib/db/positions';
 import * as books from '@/lib/db/books';
+import * as bookmarksDb from '@/lib/db/bookmarks';
 import * as flashcardsDb from '@/lib/db/flashcards';
 import * as notesDb from '@/lib/db/notes';
 import { generateWithAi, highlightToCard } from '@/lib/srs/card-generator';
@@ -178,6 +179,7 @@ const Reader = () => {
       focusCheckinInterval: s.focusCheckinInterval,
       ttsRate: s.ttsRate,
       ttsVoice: s.ttsVoice,
+      setFocusModeEnabled: s.setFocusModeEnabled,
     })),
   );
 
@@ -506,34 +508,6 @@ const Reader = () => {
     setErrorMsg(err.message);
   }, []);
 
-  // ── Keyboard shortcuts ───────────────────────────────────────────────────
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      const r = rendererRef.current;
-      if (!r) return;
-      if (e.target instanceof HTMLElement) {
-        const tag = e.target.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      }
-      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
-        e.preventDefault();
-        void r.nextPage();
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-        e.preventDefault();
-        void r.prevPage();
-      } else if (e.key === ' ') {
-        e.preventDefault();
-        setChromeVisible((v) => !v);
-      } else if (e.key === 'Escape') {
-        setPanel(null);
-        setSelection(null);
-        setAiPopover(null);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
   // ── TTS ──────────────────────────────────────────────────────────────────
   const handleToggleTts = useCallback((): void => {
     const r = rendererRef.current;
@@ -558,6 +532,49 @@ const Reader = () => {
     tts.speak(text);
     setTtsActive(true);
   }, [prefs.ttsRate, prefs.ttsVoice]);
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const r = rendererRef.current;
+      if (!r) return;
+      if (e.target instanceof HTMLElement) {
+        const tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+        e.preventDefault();
+        void r.nextPage();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        void r.prevPage();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        setChromeVisible((v) => !v);
+      } else if (e.key === 'Escape') {
+        setPanel(null);
+        setSelection(null);
+        setAiPopover(null);
+      } else if (e.key === 'h' || e.key === 'H') {
+        void applyColor('yellow');
+      } else if (e.key === 'n' || e.key === 'N') {
+        setPanel((p) => (p === 'notes' ? null : 'notes'));
+      } else if (e.key === 'f' || e.key === 'F') {
+        prefs.setFocusModeEnabled(!prefs.focusModeEnabled);
+      } else if (e.key === 't' || e.key === 'T') {
+        handleToggleTts();
+      } else if (e.key === 'b' || e.key === 'B') {
+        const cfi = r.getCurrentCfi();
+        if (cfi && book) {
+          void bookmarksDb
+            .add({ id: ulid(), bookId: book.id, cfi, createdAt: new Date().toISOString() })
+            .then(() => setToast('Marcador adicionado'));
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [applyColor, book, handleToggleTts, prefs]);
 
   // Auto-pause TTS when chat panel opens.
   useEffect(() => {

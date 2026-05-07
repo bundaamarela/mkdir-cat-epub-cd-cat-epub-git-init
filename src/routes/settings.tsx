@@ -337,6 +337,64 @@ const Settings: FC = () => {
       </div>
 
       <SyncSection />
+
+      <div className={cn(styles.card)}>
+        <h2 className={cn(styles.cardTitle)}>Atalhos de teclado</h2>
+        <table className={cn(styles.shortcutsTable)}>
+          <tbody>
+            <tr>
+              <td colSpan={2} className={cn(styles.shortcutsGroup)}>Global</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd></span></td>
+              <td>Pesquisa global</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>,</kbd></span></td>
+              <td>Definições</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>B</kbd></span></td>
+              <td>Mostrar / recolher barra lateral</td>
+            </tr>
+            <tr>
+              <td colSpan={2} className={cn(styles.shortcutsGroup)}>No leitor</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>←</kbd> / <kbd>→</kbd></span></td>
+              <td>Página anterior / seguinte</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>Espaço</kbd></span></td>
+              <td>Mostrar / ocultar interface</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>H</kbd></span></td>
+              <td>Destacar selecção a amarelo</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>N</kbd></span></td>
+              <td>Painel de notas</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>B</kbd></span></td>
+              <td>Adicionar marcador</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>F</kbd></span></td>
+              <td>Activar / desactivar modo foco</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>T</kbd></span></td>
+              <td>Activar / parar leitura em voz alta</td>
+            </tr>
+            <tr>
+              <td><span className={cn(styles.kbd)}><kbd>Esc</kbd></span></td>
+              <td>Fechar painéis / cancelar selecção</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 };
