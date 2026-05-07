@@ -1,6 +1,6 @@
 import { type FC, useMemo } from 'react';
 
-import { BookIcon, TrashIcon } from '@/components/icons';
+import { BookIcon, CardsIcon, SparklesIcon, TrashIcon } from '@/components/icons';
 import { cn } from '@/lib/utils/cn';
 import type { HighlightColor } from '@/types/highlight';
 import styles from './HighlightToolbar.module.css';
@@ -26,6 +26,10 @@ interface Props {
   onCopy: () => void;
   onDefine?: () => void;
   onTranslate?: () => void;
+  /** Cria flashcard a partir da selecção. */
+  onCreateFlashcard?: () => void;
+  /** Cria flashcard com IA (variante secundária); aparece só se `aiAvailable`. */
+  onCreateFlashcardAi?: () => void;
 }
 
 const COLORS: ReadonlyArray<{ id: HighlightColor; cssVar: string; label: string }> = [
@@ -63,6 +67,8 @@ export const HighlightToolbar: FC<Props> = ({
   onCopy,
   onDefine,
   onTranslate,
+  onCreateFlashcard,
+  onCreateFlashcardAi,
 }) => {
   const position = useMemo<ToolbarPosition | null>(
     () => (selection ? computePosition(selection) : null),
@@ -126,6 +132,30 @@ export const HighlightToolbar: FC<Props> = ({
           data-testid="translate-button"
         >
           PT
+        </button>
+      )}
+      {onCreateFlashcard && (
+        <button
+          type="button"
+          className={cn(styles.actionButton)}
+          onClick={onCreateFlashcard}
+          title="Criar flashcard"
+          aria-label="Criar flashcard"
+          data-testid="flashcard-button"
+        >
+          <CardsIcon size={14} />
+        </button>
+      )}
+      {onCreateFlashcardAi && aiAvailable && (
+        <button
+          type="button"
+          className={cn(styles.actionButton)}
+          onClick={onCreateFlashcardAi}
+          title="Gerar flashcard com IA"
+          aria-label="Gerar flashcard com IA"
+          data-testid="flashcard-ai-button"
+        >
+          <SparklesIcon size={14} />
         </button>
       )}
       {existingHighlight && (

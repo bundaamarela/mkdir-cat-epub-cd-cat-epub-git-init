@@ -177,6 +177,20 @@ export const MoreIcon: FC<IconProps> = ({ size, ...rest }) => (
   </svg>
 );
 
+export const CardsIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <rect x="3" y="7" width="13" height="14" rx="1.5" />
+    <path d="M8 4h12a1 1 0 0 1 1 1v13" />
+  </svg>
+);
+
+export const SparklesIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="M12 4v3M12 17v3M4 12h3M17 12h3" />
+    <path d="m6.5 6.5 2 2M15.5 15.5l2 2M6.5 17.5l2-2M15.5 8.5l2-2" />
+  </svg>
+);
+
 /* ============================================================
    Logos do Cat Epub — três variantes: padrão, vazio, a ler.
    Pixel-art deliberado para combinar com a Pixelify Sans.

@@ -15,6 +15,7 @@ import { PanelSettings } from '@/components/reader/PanelSettings';
 import { PanelTOC } from '@/components/reader/PanelTOC';
 import { ReaderSurface } from '@/components/reader/ReaderSurface';
 import { ReaderTopBar } from '@/components/reader/ReaderTopBar';
+import { Toast } from '@/components/shared/Toast';
 import { generateText, isAiEnabled } from '@/lib/ai/client';
 import {
   DEFINE_SYSTEM,
@@ -25,7 +26,9 @@ import {
 import { searchInBook } from '@/lib/epub/search';
 import * as positions from '@/lib/db/positions';
 import * as books from '@/lib/db/books';
+import * as flashcardsDb from '@/lib/db/flashcards';
 import * as notesDb from '@/lib/db/notes';
+import { generateWithAi, highlightToCard } from '@/lib/srs/card-generator';
 import type { EpubAnnotation, EpubRenderer, RendererOptions } from '@/lib/epub/renderer';
 import type { FoliateTOCItem } from 'foliate-js/view.js';
 import {
@@ -133,6 +136,7 @@ const Reader = () => {
     error: string | null;
     position: PopoverPosition;
   } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const rendererRef = useRef<EpubRenderer | null>(null);
   /** Stub ref for TTS integration (Phase 11). */
@@ -393,6 +397,64 @@ const Reader = () => {
     setPanel('notes');
   }, [selection, book, allHighlights, addHighlight]);
 
+  /**
+   * Garante que existe um Highlight para a selecção activa e devolve-o.
+   * Se já existir um highlight com o mesmo cfiRange, devolve esse.
+   */
+  const ensureHighlight = useCallback(async (): Promise<Highlight | null> => {
+    if (!selection || !book) return null;
+    const existing = allHighlights.find((h) => h.cfiRange === selection.cfiRange);
+    if (existing) return existing;
+    const now = new Date().toISOString();
+    const h: Highlight = {
+      id: ulid(),
+      bookId: book.id,
+      cfiRange: selection.cfiRange,
+      text: selection.text,
+      color: 'yellow',
+      tags: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    const ctx = buildContext(selection.range);
+    if (ctx !== undefined) h.context = ctx;
+    await addHighlight.mutateAsync(h);
+    return h;
+  }, [selection, book, allHighlights, addHighlight]);
+
+  const createFlashcardFromSelection = useCallback(async (): Promise<void> => {
+    const h = await ensureHighlight();
+    if (!h) return;
+    const card = highlightToCard(h);
+    await flashcardsDb.add(card);
+    try {
+      selection?.doc.getSelection()?.removeAllRanges();
+    } catch {
+      /* ignore */
+    }
+    setSelection(null);
+    setToast('Flashcard criado');
+  }, [ensureHighlight, selection]);
+
+  const createFlashcardWithAi = useCallback(async (): Promise<void> => {
+    const h = await ensureHighlight();
+    if (!h) return;
+    setToast('A gerar com IA…');
+    const generated = await generateWithAi(h, ({ system, prompt }) =>
+      generateText({ system, prompt }),
+    );
+    const baseCard = highlightToCard(h);
+    const card = generated ? { ...baseCard, front: generated.front, back: generated.back } : baseCard;
+    await flashcardsDb.add(card);
+    try {
+      selection?.doc.getSelection()?.removeAllRanges();
+    } catch {
+      /* ignore */
+    }
+    setSelection(null);
+    setToast(generated ? 'Flashcard criado com IA' : 'Flashcard criado (IA falhou — usei fallback)');
+  }, [ensureHighlight, selection]);
+
   // ── Renderer ready ───────────────────────────────────────────────────────
   const handleReady = useCallback(
     (renderer: EpubRenderer) => {
@@ -555,6 +617,8 @@ const Reader = () => {
         onCopy={() => void copySelection()}
         onDefine={defineSelection}
         onTranslate={translateSelection}
+        onCreateFlashcard={() => void createFlashcardFromSelection()}
+        onCreateFlashcardAi={() => void createFlashcardWithAi()}
       />
 
       {aiPopover && (
@@ -656,6 +720,8 @@ const Reader = () => {
           onDismiss={handleCheckinDismiss}
         />
       )}
+
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   );
 };
