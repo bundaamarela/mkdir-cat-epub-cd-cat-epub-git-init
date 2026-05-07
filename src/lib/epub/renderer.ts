@@ -94,6 +94,19 @@ export interface EpubRenderer {
   onAnnotationClick(listener: AnnotationClickListener): () => void;
   /** Liberta recursos e remove o `<foliate-view>` do host. */
   destroy(): void;
+  /**
+   * Devolve o texto completo do documento activo (para TTS).
+   * Devolve cadeia vazia se ainda não houver secção carregada.
+   */
+  getActiveText(): string;
+  /**
+   * Marca com `class="tts-active"` o elemento de bloco mais próximo do
+   * nó de texto em `charIndex` dentro do documento activo.
+   * Se `charIndex < 0`, remove a marcação anterior.
+   */
+  markTtsPosition(charIndex: number): void;
+  /** Remove qualquer marcação tts-active do documento activo. */
+  clearTtsHighlight(): void;
 }
 
 const FONT_STACK: Record<FontFamily, string> = {
@@ -127,6 +140,7 @@ p { margin-block-end: ${s.paragraphSpacing}em !important; }
 a { color: ${s.text} !important; text-decoration: underline; text-underline-offset: 2px; }
 img, svg, video { max-width: 100% !important; height: auto !important; }
 ::selection { background: rgba(255, 220, 0, 0.35); }
+.tts-active { background: rgba(255, 220, 0, 0.35) !important; border-radius: 2px; }
 `;
 };
 
@@ -181,6 +195,7 @@ export const createRenderer = async ({
   };
 
   let currentMode: 'paginated' | 'scroll' = options.paginationMode;
+  let currentDoc: Document | null = null;
   applyStyles(options);
 
   let currentCfi: string | undefined;
@@ -246,6 +261,7 @@ export const createRenderer = async ({
     const detail = (e as CustomEvent<{ doc: Document; index: number }>).detail;
     const doc = detail?.doc;
     if (!doc) return;
+    currentDoc = doc;
     doc.addEventListener('selectionchange', () => {
       const sel = doc.getSelection();
       const text = sel?.toString() ?? '';
@@ -336,6 +352,32 @@ export const createRenderer = async ({
     onAnnotationClick(listener) {
       annotationClickListeners.add(listener);
       return () => annotationClickListeners.delete(listener);
+    },
+    getActiveText() {
+      return currentDoc?.body?.textContent ?? '';
+    },
+    markTtsPosition(charIndex) {
+      if (!currentDoc) return;
+      currentDoc.querySelectorAll('.tts-active').forEach((el) => el.classList.remove('tts-active'));
+      if (charIndex < 0) return;
+      const walker = currentDoc.createTreeWalker(currentDoc.body, NodeFilter.SHOW_TEXT);
+      let offset = 0;
+      let found: Text | null = null;
+      let cur = walker.nextNode() as Text | null;
+      while (cur !== null) {
+        const len = cur.textContent?.length ?? 0;
+        if (offset + len > charIndex) { found = cur; break; }
+        offset += len;
+        cur = walker.nextNode() as Text | null;
+      }
+      if (!found) return;
+      const BLOCK_TAGS = new Set(['P', 'LI', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'DIV', 'SECTION', 'ARTICLE']);
+      let el: Element | null = found.parentElement;
+      while (el && !BLOCK_TAGS.has(el.tagName)) el = el.parentElement;
+      el?.classList.add('tts-active');
+    },
+    clearTtsHighlight() {
+      currentDoc?.querySelectorAll('.tts-active').forEach((el) => el.classList.remove('tts-active'));
     },
     destroy() {
       view.removeEventListener('relocate', relocateHandler);

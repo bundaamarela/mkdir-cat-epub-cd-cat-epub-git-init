@@ -184,6 +184,21 @@ export const CardsIcon: FC<IconProps> = ({ size, ...rest }) => (
   </svg>
 );
 
+export const HeadphonesIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <path d="M3 14v-3a9 9 0 0 1 18 0v3" />
+    <path d="M21 14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2" />
+    <path d="M3 14a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2" />
+  </svg>
+);
+
+export const PauseIcon: FC<IconProps> = ({ size, ...rest }) => (
+  <svg {...baseProps(size, rest)}>
+    <rect x="6" y="4" width="4" height="16" rx="1" />
+    <rect x="14" y="4" width="4" height="16" rx="1" />
+  </svg>
+);
+
 export const SparklesIcon: FC<IconProps> = ({ size, ...rest }) => (
   <svg {...baseProps(size, rest)}>
     <path d="M12 4v3M12 17v3M4 12h3M17 12h3" />
