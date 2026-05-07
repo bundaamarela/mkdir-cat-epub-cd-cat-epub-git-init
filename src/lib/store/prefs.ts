@@ -59,6 +59,7 @@ interface PrefsState extends Preferences {
   setSupabaseKey: (v: string | undefined) => void;
   setAiProvider: (p: AiProvider) => void;
   setAiApiKey: (key: string | undefined) => void;
+  setLibraryFolder: (path: string | undefined) => void;
   reset: () => void;
 }
 
@@ -134,6 +135,17 @@ export const usePrefs = create<PrefsState>()(
           });
         } else {
           set({ aiApiKey });
+        }
+      },
+      setLibraryFolder: (libraryFolder) => {
+        if (libraryFolder === undefined) {
+          set((s) => {
+            const { libraryFolder: _omit, ...rest } = s;
+            void _omit;
+            return rest as PrefsState;
+          });
+        } else {
+          set({ libraryFolder });
         }
       },
       reset: () => {

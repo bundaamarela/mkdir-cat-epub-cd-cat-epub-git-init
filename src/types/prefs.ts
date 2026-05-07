@@ -44,4 +44,5 @@ export interface Preferences {
   supabaseKey?: string;
   aiProvider: AiProvider;
   aiApiKey?: string;
+  libraryFolder?: string;
 }

@@ -1,6 +1,7 @@
 import { type CSSProperties, type FC, type ReactNode, useEffect, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 
+import { LibraryFolderSection } from '@/components/settings/LibraryFolderSection';
 import { SyncSection } from '@/components/settings/SyncSection';
 import { cn } from '@/lib/utils/cn';
 import { FONT_FAMILIES, FONT_VAR, type FontFamily } from '@/lib/theme/tokens';
@@ -335,6 +336,8 @@ const Settings: FC = () => {
           )}
         </ToggleRow>
       </div>
+
+      <LibraryFolderSection />
 
       <SyncSection />
 
