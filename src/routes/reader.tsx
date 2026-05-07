@@ -7,6 +7,7 @@ import { ulid } from 'ulid';
 import { AiPopover, type PopoverPosition } from '@/components/reader/AiPopover';
 import { FocusCheckinDialog } from '@/components/reader/FocusCheckinDialog';
 import { HighlightToolbar, type HighlightSelection } from '@/components/reader/HighlightToolbar';
+import { PanelChat } from '@/components/reader/PanelChat';
 import { PanelNotes } from '@/components/reader/PanelNotes';
 import { PanelOverlay } from '@/components/reader/PanelOverlay';
 import { PanelSearch } from '@/components/reader/PanelSearch';
@@ -21,6 +22,7 @@ import {
   definePrompt,
   translatePrompt,
 } from '@/lib/ai/prompts';
+import { searchInBook } from '@/lib/epub/search';
 import * as positions from '@/lib/db/positions';
 import * as books from '@/lib/db/books';
 import * as notesDb from '@/lib/db/notes';
@@ -41,7 +43,7 @@ import { debounce } from '@/lib/utils/debounce';
 import type { Highlight, HighlightColor } from '@/types/highlight';
 import type { ReadingPosition } from '@/types/book';
 
-type Panel = 'notes' | 'settings' | 'toc' | 'search' | null;
+type Panel = 'notes' | 'settings' | 'toc' | 'search' | 'chat' | null;
 
 /** Minimum upward swipe distance (px) to open settings from the bottom zone. */
 const SWIPE_THRESHOLD = 50;
@@ -524,6 +526,8 @@ const Reader = () => {
           notesCount={allHighlights.length}
           onToggleToc={() => setPanel(panel === 'toc' ? null : 'toc')}
           onToggleSearch={() => setPanel(panel === 'search' ? null : 'search')}
+          onToggleChat={() => setPanel(panel === 'chat' ? null : 'chat')}
+          chatAvailable={isAiEnabled()}
           onToggleNotes={() => setPanel(panel === 'notes' ? null : 'notes')}
           onToggleSettings={() => setPanel(panel === 'settings' ? null : 'settings')}
         />
@@ -616,6 +620,30 @@ const Reader = () => {
             onJumpTo={(cfi) => {
               void rendererRef.current?.goToCfi(cfi);
               setPanel(null);
+            }}
+          />
+        </PanelOverlay>
+      )}
+
+      {panel === 'chat' && (
+        <PanelOverlay title="Conversar com o livro" onClose={() => setPanel(null)} noPadding>
+          <PanelChat
+            bookId={book.id}
+            onCitationClick={(chunk) => {
+              const r = rendererRef.current;
+              if (!r) return;
+              // Encontra a passagem no livro via search e salta para a primeira ocorrência.
+              // Usa os primeiros ~80 chars do chunk para reduzir falsos positivos.
+              const needle = chunk.chunkText.slice(0, 80).trim();
+              if (needle.length === 0) return;
+              void searchInBook(r.getBook(), {
+                query: needle,
+                maxHits: 1,
+                cfiFor: (i, range) => r.cfiFor(i, range),
+              }).then((hits) => {
+                const first = hits[0];
+                if (first) void r.goToCfi(first.cfi);
+              });
             }}
           />
         </PanelOverlay>

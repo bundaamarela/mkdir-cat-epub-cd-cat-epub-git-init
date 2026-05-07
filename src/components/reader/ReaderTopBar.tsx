@@ -1,7 +1,14 @@
 import { type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { ChevronLeftIcon, NotesIcon, SearchIcon, SettingsIcon, TocIcon } from '@/components/icons';
+import {
+  ChatIcon,
+  ChevronLeftIcon,
+  NotesIcon,
+  SearchIcon,
+  SettingsIcon,
+  TocIcon,
+} from '@/components/icons';
 import { cn } from '@/lib/utils/cn';
 import styles from './ReaderTopBar.module.css';
 
@@ -13,6 +20,9 @@ interface Props {
   notesCount?: number;
   onToggleToc?: () => void;
   onToggleSearch?: () => void;
+  onToggleChat?: () => void;
+  /** Apenas adiciona o botão de chat se a IA estiver disponível. */
+  chatAvailable?: boolean;
   onToggleNotes?: () => void;
   onToggleSettings?: () => void;
 }
@@ -24,6 +34,8 @@ export const ReaderTopBar: FC<Props> = ({
   notesCount = 0,
   onToggleToc,
   onToggleSearch,
+  onToggleChat,
+  chatAvailable = false,
   onToggleNotes,
   onToggleSettings,
 }) => {
@@ -64,6 +76,17 @@ export const ReaderTopBar: FC<Props> = ({
             data-testid="open-search-panel"
           >
             <SearchIcon size={20} />
+          </button>
+        )}
+        {onToggleChat && chatAvailable && (
+          <button
+            type="button"
+            className={cn(styles.iconButton)}
+            onClick={onToggleChat}
+            aria-label="Conversar com o livro"
+            data-testid="open-chat-panel"
+          >
+            <ChatIcon size={20} />
           </button>
         )}
         {onToggleNotes && (
