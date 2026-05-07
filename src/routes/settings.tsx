@@ -89,6 +89,8 @@ const Settings: FC = () => {
       theme: s.theme,
       focusModeEnabled: s.focusModeEnabled,
       focusCheckinInterval: s.focusCheckinInterval,
+      aiProvider: s.aiProvider,
+      aiApiKey: s.aiApiKey,
       setFontFamily: s.setFontFamily,
       setFontSize: s.setFontSize,
       setLineHeight: s.setLineHeight,
@@ -97,8 +99,12 @@ const Settings: FC = () => {
       setTheme: s.setTheme,
       setFocusModeEnabled: s.setFocusModeEnabled,
       setFocusCheckinInterval: s.setFocusCheckinInterval,
+      setAiProvider: s.setAiProvider,
+      setAiApiKey: s.setAiApiKey,
     })),
   );
+
+  const aiEnabled = p.aiProvider === 'anthropic';
 
   const previewStyle: CSSProperties = {
     fontFamily: FONT_VAR[p.fontFamily],
@@ -219,6 +225,42 @@ const Settings: FC = () => {
                 }
                 onChange={(v) => p.setFocusCheckinInterval(Math.round(v))}
               />
+            </div>
+          )}
+        </ToggleRow>
+      </div>
+
+      <div className={cn(styles.card)}>
+        <h2 className={cn(styles.cardTitle)}>IA</h2>
+        <ToggleRow
+          label="Activar IA (Anthropic)"
+          checked={aiEnabled}
+          onChange={(v) => p.setAiProvider(v ? 'anthropic' : 'none')}
+        >
+          {aiEnabled && (
+            <div className={cn(styles.subRow)}>
+              <div className={cn(styles.field)}>
+                <label htmlFor="ai-api-key" className={cn(styles.fieldLabel)}>
+                  API key Anthropic
+                </label>
+                <input
+                  id="ai-api-key"
+                  type="password"
+                  className={cn(styles.input)}
+                  placeholder="sk-ant-..."
+                  value={p.aiApiKey ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    p.setAiApiKey(v.length === 0 ? undefined : v);
+                  }}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+              <p className={cn(styles.notice)}>
+                As queries de chat são enviadas para a Anthropic. Os embeddings ficam no teu
+                dispositivo.
+              </p>
             </div>
           )}
         </ToggleRow>

@@ -191,3 +191,33 @@
   border-left: 2px solid var(--border);
   margin: 0.5rem 0 0.25rem;
 }
+
+.input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.12s;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: var(--text);
+}
+
+.notice {
+  margin-top: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-2);
+}
