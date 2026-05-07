@@ -4,6 +4,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MobileNav } from '@/components/nav/MobileNav';
 import { MobileTopBar } from '@/components/nav/MobileTopBar';
 import { Sidebar } from '@/components/nav/Sidebar';
+import { useSyncTrigger } from '@/lib/sync/useSyncTrigger';
 import { cn } from '@/lib/utils/cn';
 import { useBreakpoint } from '@/lib/utils/useBreakpoint';
 import { isReaderRoute } from './route-utils';
@@ -13,6 +14,8 @@ export const RootLayout: FC = () => {
   const { pathname } = useLocation();
   const { isMobile } = useBreakpoint();
   const navigate = useNavigate();
+  // Mount sync trigger globally — no-op when sync is disabled.
+  useSyncTrigger();
 
   // Global Cmd/Ctrl+K → open search from any screen, including inside the reader.
   useEffect(() => {
