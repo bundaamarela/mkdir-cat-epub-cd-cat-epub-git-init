@@ -6,6 +6,7 @@ import type { Embedding } from '@/types/embedding';
 import type { Flashcard, ReadingSession } from '@/types/flashcard';
 import type { Highlight } from '@/types/highlight';
 import type { Preferences } from '@/types/prefs';
+import type { SyncQueueItem } from '@/types/sync';
 
 /**
  * Linha persistida no `prefs`: as preferências canónicas + metadados internos
@@ -29,6 +30,7 @@ export class CatEpubDB extends Dexie {
   sessions!: Table<ReadingSession, string>;
   prefs!: Table<PreferencesRow, 'singleton'>;
   embeddings!: Table<Embedding, string>;
+  syncQueue!: Table<SyncQueueItem, string>;
 
   constructor(name = 'CatEpub') {
     super(name);
@@ -45,6 +47,10 @@ export class CatEpubDB extends Dexie {
     this.version(2).stores({
       // Adds embeddings table (chunked vectors per book) for RAG.
       embeddings: 'id, bookId',
+    });
+    this.version(3).stores({
+      // Offline sync queue: drained when connectivity returns.
+      syncQueue: 'id, table, createdAt',
     });
   }
 }

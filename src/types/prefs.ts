@@ -40,6 +40,8 @@ export interface Preferences {
   ttsRate: number;
   ttsVoice?: string;
   syncEnabled: boolean;
+  supabaseUrl?: string;
+  supabaseKey?: string;
   aiProvider: AiProvider;
   aiApiKey?: string;
 }

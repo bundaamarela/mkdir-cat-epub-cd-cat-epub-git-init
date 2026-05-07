@@ -55,6 +55,8 @@ interface PrefsState extends Preferences {
   setTtsRate: (r: number) => void;
   setTtsVoice: (v: string | undefined) => void;
   setSyncEnabled: (v: boolean) => void;
+  setSupabaseUrl: (v: string | undefined) => void;
+  setSupabaseKey: (v: string | undefined) => void;
   setAiProvider: (p: AiProvider) => void;
   setAiApiKey: (key: string | undefined) => void;
   reset: () => void;
@@ -100,6 +102,28 @@ export const usePrefs = create<PrefsState>()(
         }
       },
       setSyncEnabled: (syncEnabled) => set({ syncEnabled }),
+      setSupabaseUrl: (supabaseUrl) => {
+        if (supabaseUrl === undefined || supabaseUrl.length === 0) {
+          set((s) => {
+            const { supabaseUrl: _omit, ...rest } = s;
+            void _omit;
+            return rest as PrefsState;
+          });
+        } else {
+          set({ supabaseUrl });
+        }
+      },
+      setSupabaseKey: (supabaseKey) => {
+        if (supabaseKey === undefined || supabaseKey.length === 0) {
+          set((s) => {
+            const { supabaseKey: _omit, ...rest } = s;
+            void _omit;
+            return rest as PrefsState;
+          });
+        } else {
+          set({ supabaseKey });
+        }
+      },
       setAiProvider: (aiProvider) => set({ aiProvider }),
       setAiApiKey: (aiApiKey) => {
         if (aiApiKey === undefined) {
