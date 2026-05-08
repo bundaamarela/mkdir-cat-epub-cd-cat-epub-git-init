@@ -172,7 +172,7 @@ export const createRenderer = async ({
 
   const applyAttrs = (mode: 'paginated' | 'scroll', width: number): void => {
     if (!view.renderer) return;
-    view.renderer.setAttribute('flow', mode);
+    view.renderer.setAttribute('flow', mode === 'scroll' ? 'scrolled' : 'paginated');
     // O nosso chrome é externo: deixamos margin = 0 dentro do iframe.
     view.renderer.setAttribute('margin', '0px');
     view.renderer.setAttribute('gap', '6%');
