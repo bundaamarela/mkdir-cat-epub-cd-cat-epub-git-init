@@ -1,4 +1,4 @@
-import { type FC } from 'react';
+import { type FC, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import {
@@ -31,6 +31,10 @@ interface Props {
   ttsActive?: boolean;
 }
 
+// Prevents focus from moving to the button on click — keeps focus on the reader
+// container so global keyboard shortcuts (←/→/Space/H/…) remain responsive.
+const noFocus = (e: MouseEvent<HTMLButtonElement>): void => e.preventDefault();
+
 export const ReaderTopBar: FC<Props> = ({
   title,
   author,
@@ -52,6 +56,7 @@ export const ReaderTopBar: FC<Props> = ({
       <button
         type="button"
         className={cn(styles.iconButton)}
+        onMouseDown={noFocus}
         onClick={() => navigate('/library')}
         aria-label="Voltar à biblioteca"
       >
@@ -66,6 +71,7 @@ export const ReaderTopBar: FC<Props> = ({
           <button
             type="button"
             className={cn(styles.iconButton)}
+            onMouseDown={noFocus}
             onClick={onToggleToc}
             aria-label="Índice do livro"
             data-testid="open-toc-panel"
@@ -77,6 +83,7 @@ export const ReaderTopBar: FC<Props> = ({
           <button
             type="button"
             className={cn(styles.iconButton)}
+            onMouseDown={noFocus}
             onClick={onToggleSearch}
             aria-label="Procurar no livro"
             data-testid="open-search-panel"
@@ -88,6 +95,7 @@ export const ReaderTopBar: FC<Props> = ({
           <button
             type="button"
             className={cn(styles.iconButton)}
+            onMouseDown={noFocus}
             onClick={onToggleChat}
             aria-label="Conversar com o livro"
             data-testid="open-chat-panel"
@@ -99,6 +107,7 @@ export const ReaderTopBar: FC<Props> = ({
           <button
             type="button"
             className={cn(styles.iconButton, styles.notesButton)}
+            onMouseDown={noFocus}
             onClick={onToggleNotes}
             aria-label={`Anotações${notesCount > 0 ? ` (${notesCount})` : ''}`}
             data-testid="open-notes-panel"
@@ -111,6 +120,7 @@ export const ReaderTopBar: FC<Props> = ({
           <button
             type="button"
             className={cn(styles.iconButton, ttsActive && styles.iconButtonActive)}
+            onMouseDown={noFocus}
             onClick={onToggleTts}
             aria-label={ttsActive ? 'Parar leitura em voz alta' : 'Ler em voz alta'}
             data-testid="toggle-tts"
@@ -122,6 +132,7 @@ export const ReaderTopBar: FC<Props> = ({
           <button
             type="button"
             className={cn(styles.iconButton)}
+            onMouseDown={noFocus}
             onClick={onToggleSettings}
             aria-label="Configurações de leitura"
             data-testid="open-settings-panel"

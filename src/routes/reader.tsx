@@ -149,6 +149,7 @@ const Reader = () => {
   const [toast, setToast] = useState<string | null>(null);
 
   const rendererRef = useRef<EpubRenderer | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const ttsRef = useRef<WebSpeechTTS | null>(null);
   const [ttsActive, setTtsActive] = useState(false);
 
@@ -581,6 +582,15 @@ const Reader = () => {
     if (panel === 'chat') ttsRef.current?.pause();
   }, [panel]);
 
+  // Restore focus to the reader container whenever no panel is open — keeps
+  // global keyboard shortcuts (←/→/Space/H/N/B/F/T/Esc) responsive even after
+  // clicking buttons in the top bar, panels, or the highlight toolbar.
+  useEffect(() => {
+    if (panel !== null) return;
+    const t = setTimeout(() => containerRef.current?.focus({ preventScroll: true }), 0);
+    return () => clearTimeout(t);
+  }, [panel, selection]);
+
   // Stop TTS on unmount.
   useEffect(() => {
     return () => {
@@ -616,7 +626,9 @@ const Reader = () => {
 
   return (
     <div
-      style={{ position: 'relative', width: '100%', height: '100%' }}
+      ref={containerRef}
+      tabIndex={-1}
+      style={{ position: 'relative', width: '100%', height: '100%', outline: 'none' }}
       onClick={(e) => {
         const tag = (e.target as HTMLElement).tagName;
         if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT') return;
